@@ -29,7 +29,7 @@ const App: Component = () => {
   //What to do when websocket sends a mesasge.
   server.addEventListener("message", (event) => {
     setReceivedMessage(event.data);
-    console.log(event.data);
+    console.log(event);
   });
 
   //Prints when it connects to a websocket.
