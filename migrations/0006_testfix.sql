@@ -1,13 +1,8 @@
 create or replace function test_update() returns trigger as $$
-declare
-    notification_payload text;
 begin
-    insert into test (name) values(NEW.name)
-    returning id, name into notification_payload;
-
     perform pg_notify (
         'test_row_added',
-        notification_payload
+        NEW::text
     ); return new;
 end; $$ language plpgsql;
 

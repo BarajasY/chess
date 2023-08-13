@@ -60,10 +60,10 @@ pub async fn handle_socket(
         while let Ok(msg) = listener.recv().await {
             // In any websocket error, break loop.
             println!("Debugging!");
-            dbg!(msg);
-            /* if sender.send(Message::Text(msg)).await.is_err() {
+            dbg!(&msg);
+            if sender.send(Message::Text(msg.payload().to_string())).await.is_err() {
                 break;
-            } */
+            }
         }
     });
 
@@ -72,11 +72,11 @@ pub async fn handle_socket(
         while let Some(Ok(msg)) = receiver.next().await {
             println!("wasd");
             sqlx::query("INSERT INTO test (name) VALUES ($1);")
-            .bind(msg.into_text().unwrap())
+            .bind(msg.clone().into_text().unwrap())
             .execute(&pool)
             .await
             .unwrap();
-/*             process_request(msg, addr, state.tx.clone()); */
+            process_request(msg, addr, state.tx.clone());
         }
     });
 }

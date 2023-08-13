@@ -26,6 +26,7 @@ const App: Component = () => {
     setTableId(uid());
     setWaitingGame(!WaitingGame());
   };
+
   //What to do when websocket sends a mesasge.
   server.addEventListener("message", (event) => {
     setReceivedMessage(event.data);
