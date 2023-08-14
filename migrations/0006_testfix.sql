@@ -1,8 +1,14 @@
+drop type testType;
+create type testType as (id integer, name text);
+
 create or replace function test_update() returns trigger as $$
+declare
+    notification json;
 begin
+    notification := row_to_json(NEW);
     perform pg_notify (
         'test_row_added',
-        NEW::text
+        notification::text
     ); return new;
 end; $$ language plpgsql;
 

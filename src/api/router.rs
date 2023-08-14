@@ -7,10 +7,6 @@ use super::controllers::chess::root;
 
 //Router of our app.
 pub async fn get_router() -> Router {
-    let db_pool = get_db_pool().await;
-
-/*     sqlx::migrate!("./migrations").run(&db_pool).await.expect("Error running migrations"); */
-
     println!("Connected to database");
     Router::new()
     .route("/", get(root))

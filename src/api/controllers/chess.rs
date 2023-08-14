@@ -9,6 +9,7 @@ use axum::{
     response::IntoResponse,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
+use serde_json::from_str;
 use sqlx::{postgres::PgListener, PgPool};
 use tokio::sync::broadcast::Sender;
 
@@ -16,6 +17,12 @@ use crate::api::{
     db::get_listener,
     state::{make_state, AppState},
 };
+
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+pub struct Test {
+    id: i32,
+    name: String
+}
 
 //function for test purposes.
 pub async fn root() -> String {
@@ -60,7 +67,9 @@ pub async fn handle_socket(
         while let Ok(msg) = listener.recv().await {
             // In any websocket error, break loop.
             println!("Debugging!");
-            dbg!(&msg);
+            let testingboop:Test = from_str(msg.payload()).unwrap();
+            dbg!(&testingboop);
+            dbg!(&testingboop.name);
             if sender.send(Message::Text(msg.payload().to_string())).await.is_err() {
                 break;
             }
@@ -86,9 +95,9 @@ fn process_request(msg: Message, addr: SocketAddr, tx: Sender<String>) -> Contro
     match msg {
         //Print text.
         Message::Text(t) => {
-            println!("{}", t);
+/*             println!("{}", t); */
             //Send message to clients.
-            let _ = tx.send(t).unwrap();
+/*             let _ = tx.send(t).unwrap(); */
         }
         //Print binaries
         Message::Binary(b) => {

@@ -10,7 +10,7 @@ axum = {version= "0.6.20", features=["ws"]}
 axum-extra = {version="0.7.7"}
 dotenvy = "0.15.7"
 http = "0.2.9"
-serde = "1.0.181"
+serde = { version="1.0.181", features=["derive"]}
 futures = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 serde_json = "1.0.104"
