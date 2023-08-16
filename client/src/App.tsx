@@ -6,6 +6,7 @@ import ShortUniqueId from "short-unique-id";
 const App: Component = () => {
   const [WaitingGame, setWaitingGame] = createSignal<boolean>(false);
   const [TableId, setTableId] = createSignal<string>("");
+  const [Code, setCode] = createSignal<string>("");
   const [InputMessage, setInputMessage] = createSignal<string>("");
   const [ReceivedMessage, setReceivedMessage] = createSignal<string>("");
 
@@ -14,7 +15,10 @@ const App: Component = () => {
 
   //Send text to websocket.
   const test = () => {
-    server.send(InputMessage());
+    server.send(JSON.stringify({
+      code: Code(),
+      msg: InputMessage()
+    }));
   };
 
   //Close the websocket connection in THIS client.
@@ -44,21 +48,20 @@ const App: Component = () => {
       <input
         type="text"
         name="test"
+        placeholder="message"
         oninput={(e) => setInputMessage(e.target.value)}
         autocomplete="off"
         onkeypress={(e) => e.key == "Enter" && test()}
       />
+      <input
+        type="text"
+        name="test"
+        placeholder="code"
+        oninput={(e) => setCode(e.target.value)}
+        autocomplete="off"
+        onkeypress={(e) => e.key == "Enter" && test()}
+      />
       <button onclick={() => test()}>Send</button>
-
-      {/*       <button onclick={() => test()}>Wasd</button> */}
-      {/*       <button onclick={() => close()}>Close</button>
-      <button onclick={() => showid()}>create game</button>
-      {WaitingGame() ?
-        <div class='wasd'>
-          <h1>Waiting for table!</h1>
-          <h1>Here's your table id {TableId()}</h1>
-        </div>
-      : null} */}
       <h1>{ReceivedMessage()}</h1>
     </div>
   );

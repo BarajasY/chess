@@ -21,7 +21,12 @@ use crate::api::{
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct Test {
     id: i32,
-    name: String
+    name: String,
+}
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+pub struct ReceivedMessage {
+    code: String,
+    msg: String
 }
 
 //function for test purposes.
@@ -49,6 +54,7 @@ pub async fn handle_socket(
     mut listener: PgListener,
     pool: PgPool,
 ) {
+    let mut code:String = String::new();
     //Socket splitting to both send and receive at the same time.
     let (mut sender, mut receiver) = socket.split();
 
@@ -79,12 +85,16 @@ pub async fn handle_socket(
     //Function that fires when a message is received.
     let _receive_msg = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
-            println!("wasd");
-            sqlx::query("INSERT INTO test (name) VALUES ($1);")
+            let decoded_msg:ReceivedMessage = from_str(msg.clone().into_text().unwrap().as_str()).unwrap();
+            code = decoded_msg.code;
+            println!("{}", code);
+            /* sqlx::query("INSERT INTO test (name) VALUES ($1);")
             .bind(msg.clone().into_text().unwrap())
             .execute(&pool)
             .await
-            .unwrap();
+            .unwrap(); */
+
+            //Would not recommend to remove this function as it handles the procedure to exit a websocket.
             process_request(msg, addr, state.tx.clone());
         }
     });
@@ -99,6 +109,7 @@ fn process_request(msg: Message, addr: SocketAddr, tx: Sender<String>) -> Contro
             //Send message to clients.
 /*             let _ = tx.send(t).unwrap(); */
         }
+
         //Print binaries
         Message::Binary(b) => {
             println!("Received bytes {:?}", b);

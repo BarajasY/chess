@@ -1,6 +1,3 @@
-drop type testType;
-create type testType as (id integer, name text);
-
 create or replace function test_update() returns trigger as $$
 declare
     notification json;
