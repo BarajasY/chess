@@ -2,9 +2,9 @@ import { createSignal, type Component } from "solid-js";
 
 import styles from "./App.module.css";
 import ShortUniqueId from "short-unique-id";
+import { MessageReceived } from "./utils/types";
 
 const App: Component = () => {
-  const [WaitingGame, setWaitingGame] = createSignal<boolean>(false);
   const [TableId, setTableId] = createSignal<string>("");
   const [Code, setCode] = createSignal<string>("");
   const [InputMessage, setInputMessage] = createSignal<string>("");
@@ -17,7 +17,16 @@ const App: Component = () => {
   const test = () => {
     server.send(JSON.stringify({
       code: Code(),
-      msg: InputMessage()
+      msg: InputMessage(),
+      msg_type: "CTable"
+    }));
+  };
+
+  const test2 = () => {
+    server.send(JSON.stringify({
+      code: Code(),
+      msg: InputMessage(),
+      msg_type: "Movement"
     }));
   };
 
@@ -28,13 +37,13 @@ const App: Component = () => {
 
   const showid = () => {
     setTableId(uid());
-    setWaitingGame(!WaitingGame());
   };
 
-  //What to do when websocket sends a mesasge.
+  //What to do when websocket receives a mesasge.
   server.addEventListener("message", (event) => {
+/*     const parsed:MessageReceived = JSON.parse(event.data); */
     setReceivedMessage(event.data);
-    console.log(event);
+/*     console.log(JSON.parse(event.data)); */
   });
 
   //Prints when it connects to a websocket.
@@ -61,7 +70,8 @@ const App: Component = () => {
         autocomplete="off"
         onkeypress={(e) => e.key == "Enter" && test()}
       />
-      <button onclick={() => test()}>Send</button>
+      <button onclick={() => test()}>Send code("CTable")</button>
+      <button onclick={() => test2()}>Send code("Movement")</button>
       <h1>{ReceivedMessage()}</h1>
     </div>
   );

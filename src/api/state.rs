@@ -25,7 +25,7 @@ pub fn make_state() -> Arc<AppState> {
 }
 
 //TESTING WIP.
-pub fn chess_match_state(code: String) -> Arc<ChessMatchState> {
+pub fn _chess_match_state(code: String) -> Arc<ChessMatchState> {
     let (sender, receiver) = broadcast::channel(2);
 
     Arc::new(ChessMatchState {

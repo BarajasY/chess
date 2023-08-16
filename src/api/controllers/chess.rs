@@ -26,8 +26,14 @@ pub struct Test {
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct ReceivedMessage {
     code: String,
-    msg: String
+    msg: String,
+    msg_type: String,
 }
+
+/* pub enum MessageTypes {
+    CreateTable(String),
+    Movement(String::from())
+} */
 
 //function for test purposes.
 pub async fn root() -> String {
@@ -52,42 +58,60 @@ pub async fn handle_socket(
     addr: SocketAddr,
     state: Arc<AppState>,
     mut listener: PgListener,
-    pool: PgPool,
+    _pool: PgPool,
 ) {
-    let mut code:String = String::new();
-    //Socket splitting to both send and receive at the same time.
-    let (mut sender, mut receiver) = socket.split();
-
-    //Listen to postgreSQl test_event
-    listener
-        .listen("test_row_added")
-        .await
-        .expect("Could not listen to test_event yo");
+    let mut code: String = String::new();
 
     //Subscribing to our broadcast channel.
     let mut rx = state.tx.subscribe();
     println!("{} connected to websocket", addr);
 
+    //Socket splitting to both send and receive at the same time.
+    let (mut sender, mut receiver) = socket.split();
+
+    //Listen to postgreSQl test_row_added
+    listener
+        .listen("test_row_added")
+        .await
+        .expect("Could not listen to test_row_added yo");
+
+
     //Function fired when we want to send a message.
-    let _send_task = tokio::spawn(async move {
-        while let Ok(msg) = listener.recv().await {
+    let mut send_msg = tokio::spawn(async move {
+        while let Ok(msg) = rx.recv().await {
             // In any websocket error, break loop.
             println!("Debugging!");
-            let testingboop:Test = from_str(msg.payload()).unwrap();
-            dbg!(&testingboop);
-            dbg!(&testingboop.name);
-            if sender.send(Message::Text(msg.payload().to_string())).await.is_err() {
+            if sender.send(Message::Text(msg)).await.is_err() {
                 break;
             }
         }
+
+        //Listens to notify/listen system in database.
+/*         while let Ok(msg) = listener.recv().await {
+            // In any websocket error, break loop.
+            println!("Debugging!");
+            let testingboop: Test = from_str(msg.payload()).unwrap();
+            dbg!(&testingboop);
+            dbg!(&testingboop.name);
+            if sender
+                .send(Message::Text(msg.payload().to_string()))
+                .await
+                .is_err()
+            {
+                break;
+            }
+        } */
     });
 
     //Function that fires when a message is received.
-    let _receive_msg = tokio::spawn(async move {
+    let mut receive_msg = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
-            let decoded_msg:ReceivedMessage = from_str(msg.clone().into_text().unwrap().as_str()).unwrap();
-            code = decoded_msg.code;
-            println!("{}", code);
+
+            //Transform Message type into a JSON.
+            let decoded_msg: ReceivedMessage =
+                from_str(msg.clone().into_text().unwrap().as_str()).unwrap();
+
+
             /* sqlx::query("INSERT INTO test (name) VALUES ($1);")
             .bind(msg.clone().into_text().unwrap())
             .execute(&pool)
@@ -95,19 +119,42 @@ pub async fn handle_socket(
             .unwrap(); */
 
             //Would not recommend to remove this function as it handles the procedure to exit a websocket.
-            process_request(msg, addr, state.tx.clone());
+            process_request(msg, addr, state.tx.clone(), &decoded_msg, &mut code);
         }
     });
+
+    tokio::select! {
+        _ = (&mut receive_msg) => send_msg.abort(),
+        _ = (&mut send_msg) => receive_msg.abort(),
+    };
+
 }
 
-fn process_request(msg: Message, addr: SocketAddr, tx: Sender<String>) -> ControlFlow<(), ()> {
+fn process_request(
+    msg: Message,
+    addr: SocketAddr,
+    tx: Sender<String>,
+    decoded: &ReceivedMessage,
+    code: &mut String,
+) -> ControlFlow<(), ()> {
     //Matching to find the type of message received.
     match msg {
         //Print text.
         Message::Text(t) => {
-/*             println!("{}", t); */
-            //Send message to clients.
-/*             let _ = tx.send(t).unwrap(); */
+
+            /* dbg!(decoded); */
+            println!("{}", *code);
+            println!("{}", decoded.code);
+
+            if decoded.msg_type == *"CTable".to_string() {
+                *code = decoded.code.clone();
+                println!("Creating table")
+            }
+            if decoded.msg_type == *"Movement".to_string() && decoded.code == *code {
+                println!("Private message");
+                //Send message to all clients.
+            }
+            let _ = tx.send(decoded.msg.clone());
         }
 
         //Print binaries
