@@ -6,16 +6,17 @@ use axum::{
         ws::{Message, WebSocket},
         ConnectInfo, State, WebSocketUpgrade,
     },
-    response::IntoResponse,
+    response::IntoResponse, debug_handler,
 };
+
 use futures::{sink::SinkExt, stream::StreamExt};
 use serde_json::from_str;
-use sqlx::{postgres::PgListener, PgPool};
+use sqlx::postgres::PgListener;
 use tokio::sync::broadcast::Sender;
 
 use crate::api::{
     db::get_listener,
-    state::{make_state, AppState},
+    state::AppState,
 };
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
@@ -30,26 +31,21 @@ pub struct ReceivedMessage {
     msg_type: String,
 }
 
-/* pub enum MessageTypes {
-    CreateTable(String),
-    Movement(String::from())
-} */
-
 //function for test purposes.
 pub async fn root() -> String {
     String::from("Hello from rust")
 }
 
 //Iniital http handler, this function basically transforms our http request to a websocket connection.
+#[debug_handler]
 pub async fn handle_ws(
     ws: WebSocketUpgrade,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    State(pool): State<PgPool>,
+    State(app_state):State<Arc<AppState>>,
 ) -> impl IntoResponse {
     let listener = get_listener().await;
-    let app_state = make_state();
     //Upgrades http request to websocket connection. Handshake is done automatically.
-    ws.on_upgrade(move |socket| handle_socket(socket, addr, app_state, listener, pool))
+    ws.on_upgrade(move |socket| handle_socket(socket, addr, app_state, listener))
 }
 
 //Actual websocket handler. One websocket will spawn per connection, so per client.
@@ -58,9 +54,9 @@ pub async fn handle_socket(
     addr: SocketAddr,
     state: Arc<AppState>,
     mut listener: PgListener,
-    _pool: PgPool,
 ) {
     let mut code: String = String::new();
+    let mut copied_code = &code;
 
     //Subscribing to our broadcast channel.
     let mut rx = state.tx.subscribe();
@@ -79,10 +75,12 @@ pub async fn handle_socket(
     //Function fired when we want to send a message.
     let mut send_msg = tokio::spawn(async move {
         while let Ok(msg) = rx.recv().await {
-            // In any websocket error, break loop.
-            println!("Debugging!");
-            if sender.send(Message::Text(msg)).await.is_err() {
-                break;
+            let parsed:ReceivedMessage = from_str(msg.as_str()).unwrap();
+            if parsed.msg_type == "Movement" && copied_code == parsed.code {
+                // In any websocket error, break loop.
+                if sender.send(Message::Text(msg)).await.is_err() {
+                    break;
+                }
             }
         }
 
@@ -103,15 +101,10 @@ pub async fn handle_socket(
         } */
     });
 
+
     //Function that fires when a message is received.
     let mut receive_msg = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
-
-            //Transform Message type into a JSON.
-            let decoded_msg: ReceivedMessage =
-                from_str(msg.clone().into_text().unwrap().as_str()).unwrap();
-
-
             /* sqlx::query("INSERT INTO test (name) VALUES ($1);")
             .bind(msg.clone().into_text().unwrap())
             .execute(&pool)
@@ -119,7 +112,7 @@ pub async fn handle_socket(
             .unwrap(); */
 
             //Would not recommend to remove this function as it handles the procedure to exit a websocket.
-            process_request(msg, addr, state.tx.clone(), &decoded_msg, &mut code);
+            process_request(msg, addr, state.tx.clone(), &mut code);
         }
     });
 
@@ -134,27 +127,18 @@ fn process_request(
     msg: Message,
     addr: SocketAddr,
     tx: Sender<String>,
-    decoded: &ReceivedMessage,
-    code: &mut String,
+    code: &mut String
 ) -> ControlFlow<(), ()> {
     //Matching to find the type of message received.
     match msg {
         //Print text.
         Message::Text(t) => {
 
-            /* dbg!(decoded); */
-            println!("{}", *code);
-            println!("{}", decoded.code);
-
-            if decoded.msg_type == *"CTable".to_string() {
-                *code = decoded.code.clone();
-                println!("Creating table")
+            let parsed:ReceivedMessage = from_str(t.as_str()).unwrap();
+            if parsed.msg_type == "CTable" {
+                *code = parsed.code;
             }
-            if decoded.msg_type == *"Movement".to_string() && decoded.code == *code {
-                println!("Private message");
-                //Send message to all clients.
-            }
-            let _ = tx.send(decoded.msg.clone());
+            let _ = tx.send(t);
         }
 
         //Print binaries

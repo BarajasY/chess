@@ -1,17 +1,20 @@
+
 use axum::{Router, routing::get};
 
-
-use crate::api::{controllers::chess::handle_ws,  db::get_db_pool};
+use crate::api::{controllers::chess::handle_ws,  db::get_db_pool, state::make_state};
 
 use super::controllers::chess::root;
 
 //Router of our app.
 pub async fn get_router() -> Router {
+    let app_state = make_state().await;
+
+    let testing = Router::new().route("/test", get(root)).with_state(get_db_pool().await);
+
     println!("Connected to database");
     Router::new()
-    .route("/", get(root))
     .route("/ws", get(handle_ws))
-    //Since make_state is an async function (due to the nature of database connections) we need to await it.
-    .with_state(get_db_pool().await)
+    .with_state(app_state)
+    .nest("/test", testing)
 
 }
