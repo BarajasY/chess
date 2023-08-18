@@ -15,19 +15,23 @@ const App: Component = () => {
 
   //Send text to websocket.
   const test = () => {
-    server.send(JSON.stringify({
-      code: Code(),
-      msg: InputMessage(),
-      msg_type: "CTable"
-    }));
+    server.send(
+      JSON.stringify({
+        code: Code(),
+        msg: InputMessage(),
+        msg_type: "CTable",
+      })
+    );
   };
 
   const test2 = () => {
-    server.send(JSON.stringify({
-      code: Code(),
-      msg: InputMessage(),
-      msg_type: "Movement"
-    }));
+    server.send(
+      JSON.stringify({
+        code: Code(),
+        msg: InputMessage(),
+        msg_type: "Movement",
+      })
+    );
   };
 
   //Close the websocket connection in THIS client.
@@ -41,9 +45,8 @@ const App: Component = () => {
 
   //What to do when websocket receives a mesasge.
   server.addEventListener("message", (event) => {
-/*     const parsed:MessageReceived = JSON.parse(event.data); */
-    setReceivedMessage(event.data);
-/*     console.log(JSON.parse(event.data)); */
+        const parsed:MessageReceived = JSON.parse(event.data);
+    setReceivedMessage(parsed.msg);
   });
 
   //Prints when it connects to a websocket.
@@ -53,24 +56,28 @@ const App: Component = () => {
 
   return (
     <div class={styles.App}>
-      <input
-        type="text"
-        name="test"
-        placeholder="message"
-        oninput={(e) => setInputMessage(e.target.value)}
-        autocomplete="off"
-        onkeypress={(e) => e.key == "Enter" && test()}
-      />
-      <input
-        type="text"
-        name="test"
-        placeholder="code"
-        oninput={(e) => setCode(e.target.value)}
-        autocomplete="off"
-        onkeypress={(e) => e.key == "Enter" && test()}
-      />
-      <button onclick={() => test()}>Send code("CTable")</button>
-      <button onclick={() => test2()}>Send code("Movement")</button>
+      <section>
+        <input
+          type="text"
+          name="test"
+          placeholder="message"
+          oninput={(e) => setInputMessage(e.target.value)}
+          autocomplete="off"
+          onkeypress={(e) => e.key == "Enter" && test()}
+        />
+        <button onclick={() => test2()}>Send Message</button>
+      </section>
+      <section>
+        <input
+          type="text"
+          name="test"
+          placeholder="code"
+          oninput={(e) => setCode(e.target.value)}
+          autocomplete="off"
+          onkeypress={(e) => e.key == "Enter" && test()}
+        />
+        <button onclick={() => test()}>Set Code</button>
+      </section>
       <h1>{ReceivedMessage()}</h1>
     </div>
   );
