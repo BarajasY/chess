@@ -53,7 +53,6 @@ const App: Component = () => {
 
   return (
     <div class={styles.App}>
-      <h1>Hola</h1>
       <input
         type="text"
         name="test"
