@@ -12,32 +12,27 @@ use axum::{
 
 use futures::{sink::SinkExt, stream::StreamExt};
 use serde::{Deserialize, Serialize};
-use serde_json::from_str;
-use sqlx::postgres::PgListener;
+use serde_json::{from_str, to_string};
+use sqlx::{postgres::PgListener, PgPool, Row};
 use tokio::sync::Mutex;
 
 use crate::api::{db::get_listener, state::AppState};
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
-pub struct Test {
-    id: i32,
-    name: String,
-}
-
 #[derive(Deserialize, Serialize, Debug)]
-pub struct ReceivedMessage {
+pub struct WSMessage {
     table_code: String,
     user_code: String,
     msg: String,
     msg_type: String,
+    open: Option<bool>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
-pub struct Match {
-    id: i32,
+#[derive(Deserialize, Serialize, Debug)]
+pub struct MatchData {
     code: String,
     user_one_code: String,
-    user_two_code: String,
+    user_two_code: Option<String>,
+    open: bool,
 }
 
 //function for test purposes.
@@ -71,27 +66,47 @@ pub async fn handle_socket(
     println!("{} connected to websocket", addr);
 
     //Socket splitting to both send and receive at the same time.
-    let (mut sender, mut receiver) = socket.split();
+    let (sender, mut receiver) = socket.split();
 
-    //Listen to postgreSQl test_row_added
+    let standard_sender = Arc::new(Mutex::new(sender));
+    let pg_sender = standard_sender.clone();
+
+    //Listen to postgreSQl in channel "test_row_added"
     listener
-        .listen("test_row_added")
+        .listen("added_match")
         .await
-        .expect("Could not listen to test_row_added yo");
+        .expect("Could not listen to added_match function");
+
+    //Sends initial available matches.
+    let matches = get_matches(state.pool.clone()).await;
+    standard_sender.lock().await
+        .send(Message::Text(to_string(&matches).unwrap()))
+        .await
+        .unwrap();
 
     //Function fired when we want to send a message.
     let mut send_msg = {
         let code = code.clone();
         tokio::spawn(async move {
             while let Ok(msg) = rx.recv().await {
-                let parsed: ReceivedMessage = from_str(msg.as_str()).unwrap();
+                let parsed: WSMessage = from_str(msg.as_str()).unwrap();
                 let code_guard = code.lock().await;
-                if *code_guard == parsed.table_code {
-                    // In any websocket error, break loop.
-                    if sender.send(Message::Text(msg)).await.is_err() {
+                if code_guard.clone() == parsed.table_code {
+                    let guard_sender = standard_sender.clone();
+                    // If any websocket error, break loop.
+                    if guard_sender.lock().await.send(Message::Text(msg)).await.is_err() {
                         break;
                     }
                 }
+            }
+        })
+    };
+
+    let mut _update_matches = {
+        tokio::spawn(async move {
+            let mut guard_sender = pg_sender.lock().await;
+            while let Ok(msg) = listener.recv().await {
+                guard_sender.send(Message::Text(msg.payload().to_string())).await.expect("Could not send notification");
             }
         })
     };
@@ -103,15 +118,16 @@ pub async fn handle_socket(
                 match msg {
                     //Print text.
                     Message::Text(t) => {
-                        let mut parsed: ReceivedMessage = from_str(t.as_str()).unwrap();
+                        let mut parsed: WSMessage = from_str(t.as_str()).unwrap();
                         //Handler for type of message CTable. This piece of code creates a row in our matches table.
                         if parsed.msg_type == "CTable" {
                             /* This query will create a new row inside our database. Only the table code and the first player code will be filled at this point */
                             let result = sqlx::query(
-                                "INSERT INTO matches (code, user_one_code) VALUES ($1, $2);",
+                                "INSERT INTO matches (code, user_one_code, open) VALUES ($1, $2, $3);",
                             )
                             .bind(&parsed.table_code)
                             .bind(&parsed.user_code)
+                            .bind(parsed.open)
                             .execute(&state.pool)
                             .await
                             .expect("Could not create match row");
@@ -146,8 +162,8 @@ pub async fn handle_socket(
                                 .execute(&state.pool)
                                 .await
                                 .expect("Could not delete match from database.");
-                            println!("heyt");
                             let mut code_guard = code.lock().await;
+                            //Empties current table code state.
                             *code_guard = String::new();
                         }
                         // Serialize edited message to send it to client.
@@ -171,6 +187,7 @@ pub async fn handle_socket(
                     Message::Close(_) => {
                         println!("{} closed connection", addr);
                         let code_guard = code.lock().await;
+                        //If user had a table code, it means he exited mid-match so we need to delete the match from our database.
                         if !code_guard.is_empty() {
                             sqlx::query("DELETE FROM matches WHERE code = $1;")
                                 .bind(code_guard.clone())
@@ -186,12 +203,42 @@ pub async fn handle_socket(
     };
 
     tokio::select! {
-        _ = (&mut receive_msg) => send_msg.abort(),
-        _ = (&mut send_msg) => receive_msg.abort(),
-    };
+            _ = (&mut receive_msg) => {send_msg.abort()},
+            _ = (&mut send_msg) => {receive_msg.abort()},
+    /*         _ = (&mut update_matches) => {send_msg.abort(); receive_msg.abort()} */
+        };
 }
 
 //Terminates the web socket.
 fn end_process() -> ControlFlow<(), ()> {
     ControlFlow::Break(())
+}
+
+//Retrieves open matches from our database
+async fn get_matches(pool: PgPool) -> WSMessage {
+    let rows = sqlx::query("SELECT * FROM matches WHERE open = true")
+        .fetch_all(&pool)
+        .await
+        .expect("Could not retrieve matches");
+
+    let matches: Vec<MatchData> = rows
+        .iter()
+        .map(|a| MatchData {
+            code: a.get("code"),
+            user_one_code: a.get("user_one_code"),
+            user_two_code: a.get("user_two_code"),
+            open: a.get("open"),
+        })
+        .collect();
+
+    let matches_message: WSMessage = WSMessage {
+        table_code: String::new(),
+        user_code: String::new(),
+        msg: to_string(&matches).unwrap(),
+        msg_type: String::from("Matches"),
+        open: None,
+    };
+
+    matches_message
+    //
 }
