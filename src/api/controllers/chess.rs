@@ -11,6 +11,7 @@ use axum::{
 };
 
 use futures::{sink::SinkExt, stream::StreamExt};
+use serde::{Deserialize, Serialize};
 use serde_json::from_str;
 use sqlx::postgres::PgListener;
 use tokio::sync::Mutex;
@@ -22,11 +23,21 @@ pub struct Test {
     id: i32,
     name: String,
 }
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+
+#[derive(Deserialize, Serialize, Debug)]
 pub struct ReceivedMessage {
-    code: String,
+    table_code: String,
+    user_code: String,
     msg: String,
     msg_type: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+pub struct Match {
+    id: i32,
+    code: String,
+    user_one_code: String,
+    user_two_code: String,
 }
 
 //function for test purposes.
@@ -74,8 +85,8 @@ pub async fn handle_socket(
         tokio::spawn(async move {
             while let Ok(msg) = rx.recv().await {
                 let parsed: ReceivedMessage = from_str(msg.as_str()).unwrap();
-                let test = code.lock().await;
-                if parsed.msg_type == "Movement" && *test == parsed.code {
+                let code_guard = code.lock().await;
+                if *code_guard == parsed.table_code {
                     // In any websocket error, break loop.
                     if sender.send(Message::Text(msg)).await.is_err() {
                         break;
@@ -84,7 +95,6 @@ pub async fn handle_socket(
             }
         })
     };
-    /* let copy_code = &mut code.clone(); */
 
     //Function that fires when a message is received.
     let mut receive_msg = {
@@ -93,12 +103,57 @@ pub async fn handle_socket(
                 match msg {
                     //Print text.
                     Message::Text(t) => {
-                        let parsed: ReceivedMessage = from_str(t.as_str()).unwrap();
+                        let mut parsed: ReceivedMessage = from_str(t.as_str()).unwrap();
+                        //Handler for type of message CTable. This piece of code creates a row in our matches table.
                         if parsed.msg_type == "CTable" {
-                            let mut test = code.lock().await;
-                            *test = parsed.code;
+                            /* This query will create a new row inside our database. Only the table code and the first player code will be filled at this point */
+                            let result = sqlx::query(
+                                "INSERT INTO matches (code, user_one_code) VALUES ($1, $2);",
+                            )
+                            .bind(&parsed.table_code)
+                            .bind(&parsed.user_code)
+                            .execute(&state.pool)
+                            .await
+                            .expect("Could not create match row");
+
+                            //If query actually affects the database (create a new row) update state code.
+                            if result.rows_affected() > 0 {
+                                let mut code_guard = code.lock().await;
+                                *code_guard = parsed.table_code.clone();
+                                parsed.msg = String::from("Created Table!");
+                            }
+                        //Handler for type of message JTable, basically controls how a user joins a table.
+                        } else if parsed.msg_type == "JTable" {
+                            /* This query edits a row from our database only to insert the code of the second player. */
+                            let result = sqlx::query(
+                                "UPDATE matches SET user_two_code = $1 WHERE code = $2;",
+                            )
+                            .bind(&parsed.user_code)
+                            .bind(&parsed.table_code)
+                            .execute(&state.pool)
+                            .await
+                            .expect("Could not join table");
+                            // If table row was actually edited, assign the table code to the user.
+                            if result.rows_affected() > 0 {
+                                let mut code_guard = code.lock().await;
+                                *code_guard = parsed.table_code.clone();
+                                parsed.msg = String::from("Joined Table");
+                            }
+                        //Handler for Deleting matches from database..
+                        } else if parsed.msg_type == "Delete" {
+                            sqlx::query("DELETE FROM matches WHERE code = $1;")
+                                .bind(&parsed.table_code)
+                                .execute(&state.pool)
+                                .await
+                                .expect("Could not delete match from database.");
+                            println!("heyt");
+                            let mut code_guard = code.lock().await;
+                            *code_guard = String::new();
                         }
-                        let _ = state.tx.send(t);
+                        // Serialize edited message to send it to client.
+                        let serialized = serde_json::to_string(&parsed).unwrap();
+                        // Send edited message to client (send_msg function)
+                        let _ = state.tx.send(serialized);
                     }
                     //Print binaries
                     Message::Binary(b) => {
@@ -115,11 +170,17 @@ pub async fn handle_socket(
                     //Close websocket request.
                     Message::Close(_) => {
                         println!("{} closed connection", addr);
+                        let code_guard = code.lock().await;
+                        if !code_guard.is_empty() {
+                            sqlx::query("DELETE FROM matches WHERE code = $1;")
+                                .bind(code_guard.clone())
+                                .execute(&state.pool)
+                                .await
+                                .expect("Could not delete match from database.");
+                        }
                         end_process();
                     }
                 }
-                //Would not recommend to remove this function as it handles the procedure to exit a websocket.
-                /*             process_request(msg, addr, state.tx.clone(), &mut code); */
             }
         })
     };
@@ -130,47 +191,7 @@ pub async fn handle_socket(
     };
 }
 
-/* fn process_request(
-    msg: Message,
-    addr: SocketAddr,
-    tx: Sender<String>,
-    code: &mut String,
-) -> ControlFlow<(), ()> {
-    //Matching to find the type of message received.
-    match msg {
-        //Print text.
-        Message::Text(t) => {
-            let parsed: ReceivedMessage = from_str(t.as_str()).unwrap();
-            if parsed.msg_type == "CTable" {
-                *code = parsed.code;
-            }
-            let _ = tx.send(t);
-        }
-
-        //Print binaries
-        Message::Binary(b) => {
-            println!("Received bytes {:?}", b);
-        }
-        //Print ping
-        Message::Ping(pi) => {
-            println!("Received ping {:?}", pi);
-        }
-        //Print pong
-        Message::Pong(po) => {
-            println!("Received pong {:?}", po);
-        }
-        //Close websocket request.
-        Message::Close(_) => {
-            println!("Closing connection");
-            println!("{} closed connection", addr);
-            return ControlFlow::Break(());
-        }
-    }
-
-    ControlFlow::Continue(())
-}
- */
-
+//Terminates the web socket.
 fn end_process() -> ControlFlow<(), ()> {
     ControlFlow::Break(())
 }
