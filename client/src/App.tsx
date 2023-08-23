@@ -1,14 +1,15 @@
-import { createSignal, type Component } from "solid-js";
+import { createSignal, type Component, For } from "solid-js";
 
 import styles from "./App.module.css";
 import ShortUniqueId from "short-unique-id";
-import { MessageReceived } from "./utils/types";
+import { MatchesData, MessageReceived } from "./utils/types";
 
 const App: Component = () => {
   const [TableCode, setTableCode] = createSignal<string>("");
   const [Code, setCode] = createSignal<string>("");
   const [InputMessage, setInputMessage] = createSignal<string>("");
   const [ReceivedMessage, setReceivedMessage] = createSignal<string>("");
+  const [AvailableMatches, setAvailableMatches] = createSignal<MatchesData[]>([]);
   const [UserCode, setUserCode] = createSignal<string>("");
 
   const server = new WebSocket("ws://127.0.0.1:8000/ws");
@@ -22,6 +23,7 @@ const App: Component = () => {
         msg: "",
         msg_type: "CTable",
         user_code: UserCode(),
+        open: true
       })
     );
   };
@@ -60,8 +62,11 @@ const App: Component = () => {
       setTableCode(parsed.table_code);
     } else if (parsed.msg_type == "Delete") {
       setTableCode("")
+    } else if (parsed.msg_type == "Matches") {
+      setReceivedMessage("");
+      setAvailableMatches(JSON.parse(parsed.msg))
+      console.log(AvailableMatches());
     }
-    setReceivedMessage(parsed.msg);
   });
 
   //Prints when it connects to a websocket.
@@ -108,6 +113,12 @@ const App: Component = () => {
       </section>
       <p>Table code: {TableCode()}</p>
       <h1>{ReceivedMessage()}</h1>
+      <For each={AvailableMatches()}>{(match, i) => (
+        <>
+          <h1>{match.code}</h1>
+        </>
+      )}
+      </For>
     </div>
   );
 };
