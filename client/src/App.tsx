@@ -58,14 +58,19 @@ const App: Component = () => {
   //What to do when websocket receives a mesasge.
   server.addEventListener("message", (event) => {
     const parsed: MessageReceived = JSON.parse(event.data);
+    console.log(parsed);
     if (parsed.msg_type == "CTable" || parsed.msg_type == "JTable") {
       setTableCode(parsed.table_code);
     } else if (parsed.msg_type == "Delete") {
       setTableCode("")
-    } else if (parsed.msg_type == "Matches") {
+    } else if (parsed.msg_type == "Movement") {
+      setReceivedMessage(parsed.msg);
+    }
+    else if (parsed.msg_type == "Matches") {
       setReceivedMessage("");
       setAvailableMatches(JSON.parse(parsed.msg))
-      console.log(AvailableMatches());
+    } else if (parsed.msg_type == "PgNotification") {
+      setAvailableMatches([...AvailableMatches(), JSON.parse(parsed.msg)])
     }
   });
 
