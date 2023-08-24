@@ -1,5 +1,5 @@
 //This file represents the code that will work whenever the match starts.
-use std::{net::SocketAddr, ops::ControlFlow, string, sync::Arc};
+use std::{net::SocketAddr, ops::ControlFlow, sync::Arc};
 
 use axum::{
     debug_handler,
@@ -13,8 +13,8 @@ use axum::{
 use futures::{sink::SinkExt, stream::StreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, to_string};
-use sqlx::{postgres::PgListener, PgPool, Row};
-use tokio::sync::{mpsc, Mutex};
+use sqlx::{postgres::PgListener, Row};
+use tokio::sync::Mutex;
 
 use crate::api::{db::get_listener, state::AppState};
 
@@ -66,7 +66,9 @@ pub async fn handle_socket(
     println!("{} connected to websocket", addr);
 
     //Socket splitting to both send and receive at the same time.
-    let (mut sender, mut receiver) = socket.split();
+    let (sender, mut receiver) = socket.split();
+
+    let sender2 = Arc::new(Mutex::new(sender));
 
     //Listen to postgreSQl in channel "test_row_added"
     listener
@@ -97,30 +99,37 @@ pub async fn handle_socket(
         msg_type: String::from("Matches"),
         open: None,
     };
-    sender
+
+    let initial_sender = sender2.clone();
+    initial_sender
+        .lock()
+        .await
         .send(Message::Text(to_string(&matches_message).unwrap()))
         .await
         .unwrap();
 
-
     //Function fired when we want to send a message.
     let mut send_msg = {
         let code = code.clone();
+        let msg_sender = sender2.clone();
         tokio::spawn(async move {
             while let Ok(msg) = rx.recv().await {
-                dbg!(&msg);
                 let parsed: WSMessage = from_str(msg.as_str()).unwrap();
                 let code_guard = code.lock().await;
                 if code_guard.clone() == parsed.table_code {
-                    // If any websocket error, break loop.
-                    sender.send(Message::Text(msg)).await.unwrap();
+                    msg_sender
+                        .lock()
+                        .await
+                        .send(Message::Text(msg))
+                        .await
+                        .unwrap();
                 }
             }
         })
     };
 
     let mut _update_matches = {
-        let pg_sender = state.clone();
+        let pg_sender = sender2.clone();
         tokio::spawn(async move {
             while let Ok(msg) = listener.recv().await {
                 let notification_message: WSMessage = WSMessage {
@@ -131,8 +140,14 @@ pub async fn handle_socket(
                     open: Some(true),
                 };
                 let wasd = to_string(&notification_message).unwrap();
-                println!("Hey there");
-                pg_sender.lock().await.sctx.send(wasd).await.unwrap();
+                if pg_sender
+                    .lock()
+                    .await
+                    .send(Message::Text(wasd))
+                    .await
+                    .is_ok()
+                {
+                }
             }
         })
     };
@@ -227,12 +242,9 @@ pub async fn handle_socket(
             }
         })
     };
-
-    /*     tokio::select! {
-            _ = (&mut receive_msg) => {send_msg.abort()},
-            _ = (&mut send_msg) => {receive_msg.abort()},
-    /*         _ = (&mut update_matches) => {send_msg.abort(); receive_msg.abort()} */
-        }; */
+    tokio::select! {
+    _ = (&mut receive_msg) => {send_msg.abort()},
+    _ = (&mut send_msg) => {receive_msg.abort()},        };
 }
 
 //Terminates the web socket.
