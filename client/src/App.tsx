@@ -1,5 +1,4 @@
 import { createSignal, type Component, For } from "solid-js";
-
 import styles from "./App.module.css";
 import ShortUniqueId from "short-unique-id";
 import { MatchesData, MessageReceived } from "./utils/types";
@@ -9,7 +8,9 @@ const App: Component = () => {
   const [Code, setCode] = createSignal<string>("");
   const [InputMessage, setInputMessage] = createSignal<string>("");
   const [ReceivedMessage, setReceivedMessage] = createSignal<string>("");
-  const [AvailableMatches, setAvailableMatches] = createSignal<MatchesData[]>([]);
+  const [AvailableMatches, setAvailableMatches] = createSignal<MatchesData[]>(
+    []
+  );
   const [UserCode, setUserCode] = createSignal<string>("");
 
   const server = new WebSocket("ws://127.0.0.1:8000/ws");
@@ -23,15 +24,15 @@ const App: Component = () => {
         msg: "",
         msg_type: "CTable",
         user_code: UserCode(),
-        open: true
+        open: true,
       })
     );
   };
 
-  const joinTable = () => {
+  const joinTable = (code: string) => {
     server.send(
       JSON.stringify({
-        table_code: Code(),
+        table_code: code,
         msg_type: "JTable",
         user_code: UserCode(),
         msg: "",
@@ -62,15 +63,14 @@ const App: Component = () => {
     if (parsed.msg_type == "CTable" || parsed.msg_type == "JTable") {
       setTableCode(parsed.table_code);
     } else if (parsed.msg_type == "Delete") {
-      setTableCode("")
+      setTableCode("");
     } else if (parsed.msg_type == "Movement") {
       setReceivedMessage(parsed.msg);
-    }
-    else if (parsed.msg_type == "Matches") {
+    } else if (parsed.msg_type == "Matches") {
       setReceivedMessage("");
-      setAvailableMatches(JSON.parse(parsed.msg))
+      setAvailableMatches(JSON.parse(parsed.msg));
     } else if (parsed.msg_type == "PgNotification") {
-      setAvailableMatches([...AvailableMatches(), JSON.parse(parsed.msg)])
+      setAvailableMatches([...AvailableMatches(), JSON.parse(parsed.msg)]);
     }
   });
 
@@ -114,16 +114,25 @@ const App: Component = () => {
           onkeypress={(e) => e.key == "Enter" && createTable()}
         />
         <button onclick={() => createTable()}>create table</button>
-        <button onclick={() => joinTable()}>join table</button>
+        <button onclick={() => joinTable(Code())}>join table</button>
       </section>
-      <p>Table code: {TableCode()}</p>
+      <p>Table code: <span>{TableCode()}</span></p>
       <h1>{ReceivedMessage()}</h1>
-      <For each={AvailableMatches()}>{(match, i) => (
-        <>
-          <h1>{match.code}</h1>
-        </>
-      )}
-      </For>
+      <p>Join a Room!</p>
+      <div class={styles.MatchesContainer}>
+        <For each={AvailableMatches()}>
+          {(match, i) => (
+            <>
+              <h1
+                class={styles.MatchCodes}
+                onclick={() => joinTable(match.code)}
+              >
+                {match.code}
+              </h1>
+            </>
+          )}
+        </For>
+      </div>
     </div>
   );
 };
