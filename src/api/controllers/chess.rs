@@ -60,6 +60,8 @@ pub async fn handle_socket(
     mut listener: PgListener,
 ) {
     let code = Arc::new(Mutex::new(String::new()));
+    let player_one = Arc::new(Mutex::new(String::new()));
+    let player_two = Arc::new(Mutex::new(String::new()));
 
     //Subscribing to our broadcast channel.
     let mut rx = state.lock().await.tx.subscribe();
@@ -113,6 +115,9 @@ pub async fn handle_socket(
         let msg_sender = sender2.clone();
         tokio::spawn(async move {
             while let Ok(msg) = rx.recv().await {
+                //WIP ADD START FUNCTIONALITY...
+                //
+                //
                 let parsed: WSMessage = from_str(msg.as_str()).unwrap();
                 let code_guard = code.lock().await;
                 if code_guard.clone() == parsed.table_code {
@@ -145,8 +150,7 @@ pub async fn handle_socket(
                     .send(Message::Text(wasd))
                     .await
                     .is_ok()
-                {
-                }
+                {}
             }
         })
     };
@@ -160,51 +164,73 @@ pub async fn handle_socket(
                     Message::Text(t) => {
                         let mut parsed: WSMessage = from_str(t.as_str()).unwrap();
                         //Handler for type of message CTable. This piece of code creates a row in our matches table.
-                        if parsed.msg_type == "CTable" {
+                        match parsed.msg_type.as_str() {
                             /* This query will create a new row inside our database. Only the table code and the first player code will be filled at this point */
-                            let result = sqlx::query(
-                                "INSERT INTO matches (code, user_one_code, open) VALUES ($1, $2, $3);",
-                            )
-                            .bind(&parsed.table_code)
-                            .bind(&parsed.user_code)
-                            .bind(parsed.open)
-                            .execute(&state.lock().await.pool)
-                            .await
-                            .expect("Could not create match row");
+                            "CTable" => {
+                                let result = sqlx::query(
+                                    "INSERT INTO matches (code, user_one_code, open) VALUES ($1, $2, $3);",
+                                )
+                                .bind(&parsed.table_code)
+                                .bind(&parsed.user_code)
+                                .bind(parsed.open)
+                                .execute(&state.lock().await.pool)
+                                .await
+                                .expect("Could not create match row");
 
-                            //If query actually affects the database (create a new row) update state code.
-                            if result.rows_affected() > 0 {
-                                let mut code_guard = code.lock().await;
-                                *code_guard = parsed.table_code.clone();
-                                parsed.msg = String::from("Created Table!");
+                                //If query actually affects the database (create a new row) update state code.
+                                if result.rows_affected() > 0 {
+                                    let mut code_guard = code.lock().await;
+                                    *code_guard = parsed.table_code.clone();
+                                    parsed.msg = String::from("Created Table!");
+                                }
                             }
-                        //Handler for type of message JTable, basically controls how a user joins a table.
-                        } else if parsed.msg_type == "JTable" {
-                            /* This query edits a row from our database only to insert the code of the second player. */
-                            let result = sqlx::query(
-                                "UPDATE matches SET user_two_code = $1 WHERE code = $2;",
-                            )
-                            .bind(&parsed.user_code)
-                            .bind(&parsed.table_code)
-                            .execute(&state.lock().await.pool)
-                            .await
-                            .expect("Could not join table");
-                            // If table row was actually edited, assign the table code to the user.
-                            if result.rows_affected() > 0 {
-                                let mut code_guard = code.lock().await;
-                                *code_guard = parsed.table_code.clone();
-                                parsed.msg = String::from("Joined Table");
-                            }
-                        //Handler for Deleting matches from database..
-                        } else if parsed.msg_type == "Delete" {
-                            sqlx::query("DELETE FROM matches WHERE code = $1;")
+                            //Handler for type of message JTable, basically controls how a user joins a table.
+                            "JTable" => {
+                                /* This query edits a row from our database only to insert the code of the second player. */
+                                let result = sqlx::query(
+                                    "UPDATE matches SET user_two_code = $1 WHERE code = $2;",
+                                )
+                                .bind(&parsed.user_code)
                                 .bind(&parsed.table_code)
                                 .execute(&state.lock().await.pool)
                                 .await
-                                .expect("Could not delete match from database.");
-                            let mut code_guard = code.lock().await;
-                            //Empties current table code state.
-                            *code_guard = String::new();
+                                .expect("Could not join table");
+                                // If table row was actually edited, assign the table code to the user.
+                                if result.rows_affected() > 0 {
+                                    let mut code_guard = code.lock().await;
+                                    *code_guard = parsed.table_code.clone();
+                                    parsed.msg = String::from("Joined Table");
+                                }
+                            }
+                            //Handler for actually starting a match.
+                            "Start" => {
+                                let result = sqlx::query(
+                                    "SELECT * FROM matches WHERE code = $1"
+                                )
+                                .bind(&parsed.table_code)
+                                .fetch_one(&state.lock().await.pool)
+                                .await
+                                .expect("Could not start match");
+
+                                if !result.is_empty() {
+                                    *player_one.lock().await = result.get("user_one_code");
+                                    *player_two.lock().await = result.get("user_two_code");
+                                }
+                            }
+                            //Handler for Deleting matches from database..
+                            "Delete" => {
+                                sqlx::query("DELETE FROM matches WHERE code = $1;")
+                                    .bind(&parsed.table_code)
+                                    .execute(&state.lock().await.pool)
+                                    .await
+                                    .expect("Could not delete match from database.");
+                                let mut code_guard = code.lock().await;
+                                //Empties current table code state.
+                                *code_guard = String::new();
+                            }
+                            &_ => {
+                                println!("Code not found");
+                            }
                         }
                         // Serialize edited message to send it to client.
                         let serialized = serde_json::to_string(&parsed).unwrap();
@@ -227,7 +253,7 @@ pub async fn handle_socket(
                     Message::Close(_) => {
                         println!("{} closed connection", addr);
                         let code_guard = code.lock().await;
-                        //If user had a table code, it means he exited mid-match so we need to delete the match from our database.
+                        //If user had a table code when closing ws, it means they exited mid-match so we need to delete the match from our database.
                         if !code_guard.is_empty() {
                             sqlx::query("DELETE FROM matches WHERE code = $1;")
                                 .bind(code_guard.clone())
@@ -243,39 +269,11 @@ pub async fn handle_socket(
     };
     tokio::select! {
     _ = (&mut receive_msg) => {send_msg.abort()},
-    _ = (&mut send_msg) => {receive_msg.abort()},        };
+    _ = (&mut send_msg) => {receive_msg.abort()},
+    };
 }
 
 //Terminates the web socket.
 fn end_process() -> ControlFlow<(), ()> {
     ControlFlow::Break(())
 }
-
-//Retrieves open matches from our database
-/* async fn get_matches(pool: PgPool) -> WSMessage {
-    let rows = sqlx::query("SELECT * FROM matches WHERE open = true")
-        .fetch_all(&pool)
-        .await
-        .expect("Could not retrieve matches");
-
-    let matches: Vec<MatchData> = rows
-        .iter()
-        .map(|a| MatchData {
-            code: a.get("code"),
-            user_one_code: a.get("user_one_code"),
-            user_two_code: a.get("user_two_code"),
-            open: a.get("open"),
-        })
-        .collect();
-
-    let matches_message: WSMessage = WSMessage {
-        table_code: String::new(),
-        user_code: String::new(),
-        msg: to_string(&matches).unwrap(),
-        msg_type: String::from("Matches"),
-        open: None,
-    };
-
-    matches_message
-    //
-} */
