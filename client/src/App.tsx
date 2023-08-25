@@ -11,13 +11,16 @@ const App: Component = () => {
   const [AvailableMatches, setAvailableMatches] = createSignal<MatchesData[]>(
     []
   );
+  const [Waiting, setWaiting] = createSignal<boolean>(false);
   const [UserCode, setUserCode] = createSignal<string>("");
+  const [StartMatch, setStartMatch] = createSignal<boolean>(false);
 
   const server = new WebSocket("ws://127.0.0.1:8000/ws");
   const uid = new ShortUniqueId();
 
   //Send text to websocket.
   const createTable = () => {
+    setWaiting(!Waiting());
     server.send(
       JSON.stringify({
         table_code: uid(),
@@ -59,9 +62,16 @@ const App: Component = () => {
   //What to do when websocket receives a mesasge.
   server.addEventListener("message", (event) => {
     const parsed: MessageReceived = JSON.parse(event.data);
-    console.log(parsed);
     if (parsed.msg_type == "CTable" || parsed.msg_type == "JTable") {
       setTableCode(parsed.table_code);
+      if (parsed.msg_type == "JTable") {
+        server.send(JSON.stringify({
+          table_code: TableCode(),
+          msg: "",
+          msg_type: "Start",
+          user_code: UserCode()
+        }))
+      }
     } else if (parsed.msg_type == "Delete") {
       setTableCode("");
     } else if (parsed.msg_type == "Movement") {
@@ -93,66 +103,48 @@ const App: Component = () => {
 
   return (
     <div class={styles.AppContainer}>
+      {StartMatch()
+      ?
+        <div class={styles.MatchContainer}>
+          <h1>Match Started!</h1>
+        </div>
+      :
       <div class={styles.AppHeader}>
         <h1>Chessing</h1>
         <section class={styles.ChessOptions}>
           <article class={styles.CreateTable}>
-            <button>Create Table</button>
+            <button onclick={() => createTable()}>Create Table</button>
           </article>
           <article class={styles.JoinTable}>
             <p>If you've got a code</p>
-            <input type="text" onchange={(e) => setCode(e.target.value)}/>
-            <button>Find match</button>
+            <input type="text" onchange={(e) => setCode(e.target.value)} />
+            <button onClick={() => joinTable(Code())}>Find match</button>
           </article>
         </section>
         <div class={styles.MatchesList}>
           <p>Join an open match!</p>
-          <For each={AvailableMatches()}>{(match, i) => (
-            <button>{match.code}</button>
-          )}
-          </For>
+          <div class={styles.Matches}>
+            <For each={AvailableMatches()}>
+              {(match, i) => (
+                <button onClick={() => joinTable(match.code)}>
+                  {match.code}
+                </button>
+              )}
+            </For>
+          </div>
         </div>
+        {Waiting() && (
+          <div class={styles.WaitingContainer}>
+            <div class={styles.WaitingContent}>
+              <h1>Waiting for your opponent</h1>
+              <p>
+                Your table code is <span>{TableCode()}</span>
+              </p>
+            </div>
+          </div>
+        )}
       </div>
-{/*       <section>
-        <input
-          type="text"
-          name="test"
-          placeholder="message"
-          oninput={(e) => setInputMessage(e.target.value)}
-          autocomplete="off"
-          onkeypress={(e) => e.key == "Enter" && createTable()}
-        />
-        <button onclick={() => submitMessage()}>Send Message</button>
-      </section>
-      <section>
-        <input
-          type="text"
-          name="test"
-          placeholder="code"
-          oninput={(e) => setCode(e.target.value)}
-          autocomplete="off"
-          onkeypress={(e) => e.key == "Enter" && createTable()}
-        />
-        <button onclick={() => createTable()}>create table</button>
-        <button onclick={() => joinTable(Code())}>join table</button>
-      </section>
-      <p>Table code: <span>{TableCode()}</span></p>
-      <h1>{ReceivedMessage()}</h1>
-      <p>Join a Room!</p>
-      <div class={styles.MatchesContainer}>
-        <For each={AvailableMatches()}>
-          {(match, i) => (
-            <>
-              <h1
-                class={styles.MatchCodes}
-                onclick={() => joinTable(match.code)}
-              >
-                {match.code}
-              </h1>
-            </>
-          )}
-        </For>
-      </div> */}
+      }
     </div>
   );
 };

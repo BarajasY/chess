@@ -16,7 +16,7 @@
 }
 
 .AppHeader h1:nth-child(1) {
-  color: var(--orange);
+  color: var(--lblue);
 }
 
 .ChessOptions {
@@ -27,6 +27,13 @@
   border: 2px solid white;
   display: flex;
   justify-content: space-around;
+}
+
+.CreateTable {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
 }
 
 .CreateTable button {
@@ -109,6 +116,7 @@
   border: 2px solid white;
   border-radius: 3px;
   transition: .2s;
+  margin: 5px;
 }
 
 .MatchesList button:hover {
@@ -116,4 +124,43 @@
   cursor: hover;
   border: 2px solid var(--dwhite);
   cursor: pointer;
+}
+
+.Matches {
+  display: flex;
+}
+
+.WaitingContainer {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100vh;
+}
+
+.WaitingContent {
+  width: 70%;
+  height: 70%;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.951);
+  border-radius: 10px;
+  border: 2px solid white;
+}
+
+.WaitingContent h1 {
+  color: var(--lblue);
+  font-size: 25px;
+}
+
+.WaitingContent p {
+  color: var(--navy);
+  font-size: 20px;
+}
+
+.WaitingContent p span {
+  color: var(--silver);
 }
