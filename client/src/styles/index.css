@@ -1,0 +1,28 @@
+* {
+  margin: 0px;
+  padding: 0px;
+  text-decoration: none;
+  outline: none;
+  font-family: "Rubik", "Quicksand", sans-serif;
+  font-weight: 700;
+  color: white;
+}
+
+body {
+  background: black;
+}
+
+:root {
+  --pink: #e10070;
+  --silver: #bacad1;
+  --coral: #d04f38;
+  --lgreen: #50bd26;
+  --lblue: #72b9f0;
+  --llblue: #72b9f069;
+  --dblue: #074dac;
+  --ldblue: #074cac5f;
+  --orange: #ff9c40;
+  --white: #fffFFF;
+  --dwhite: #ffffffa3;
+  --ddwhite: #ffffff2f;
+}

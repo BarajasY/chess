@@ -1,0 +1,119 @@
+.AppContainer {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.AppHeader {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.AppHeader h1:nth-child(1) {
+  color: var(--orange);
+}
+
+.ChessOptions {
+  width: 50%;
+  margin: 10px 0px;
+  padding: 30px;
+  border-radius: 10px;
+  border: 2px solid white;
+  display: flex;
+  justify-content: space-around;
+}
+
+.CreateTable button {
+  margin: 30px 0px;
+  background: none;
+  padding: 10px 20px;
+  border: 2px solid var(--lblue);
+  font-size: 20px;
+  transition: .2s;
+  border-radius: 5px;
+}
+
+.CreateTable button:hover {
+  border: 2px solid var(--dblue);
+  cursor: pointer;
+  color: var(--dblue);
+  box-shadow: 0px 0px 30px var(--dblue);
+}
+
+.JoinTable {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.JoinTable p {
+  color: var(--silver);
+}
+
+.JoinTable input {
+  background: black;
+  border: 2px solid var(--lblue);
+  padding: 10px;
+  border-radius: 5px;
+  text-align: center;
+  margin: 20px 0px;
+  transition: .2s;
+}
+
+.JoinTable input:hover {
+  background: var(--ddhite);
+  border: 2px solid var(--dwhite);
+}
+
+.JoinTable input:active, .JoinTable input:focus {
+  box-shadow: 0px 0px 30px var(--dblue);
+}
+
+.JoinTable button {
+  background: black;
+  color: var(--lblue);
+  width: 100px;
+  border: 2px solid white;
+  padding: 10px;
+  border-radius: 5px;
+  transition: .2s;
+}
+
+.JoinTable button:hover {
+  background: white;
+  color: black;
+  cursor: pointer;
+}
+
+.MatchesList {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.MatchesList p {
+  margin: 10px;
+}
+
+.MatchesList button {
+  background: black;
+  padding: 9px 10px;
+  border: 2px solid white;
+  border-radius: 3px;
+  transition: .2s;
+}
+
+.MatchesList button:hover {
+  box-shadow: 0px 0px 20px var(--dwhite);
+  cursor: hover;
+  border: 2px solid var(--dwhite);
+  cursor: pointer;
+}

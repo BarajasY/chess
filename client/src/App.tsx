@@ -1,5 +1,5 @@
 import { createSignal, type Component, For } from "solid-js";
-import styles from "./App.module.css";
+import styles from "./styles/App.module.css";
 import ShortUniqueId from "short-unique-id";
 import { MatchesData, MessageReceived } from "./utils/types";
 
@@ -92,8 +92,28 @@ const App: Component = () => {
   });
 
   return (
-    <div class={styles.App}>
-      <section>
+    <div class={styles.AppContainer}>
+      <div class={styles.AppHeader}>
+        <h1>Chessing</h1>
+        <section class={styles.ChessOptions}>
+          <article class={styles.CreateTable}>
+            <button>Create Table</button>
+          </article>
+          <article class={styles.JoinTable}>
+            <p>If you've got a code</p>
+            <input type="text" onchange={(e) => setCode(e.target.value)}/>
+            <button>Find match</button>
+          </article>
+        </section>
+        <div class={styles.MatchesList}>
+          <p>Join an open match!</p>
+          <For each={AvailableMatches()}>{(match, i) => (
+            <button>{match.code}</button>
+          )}
+          </For>
+        </div>
+      </div>
+{/*       <section>
         <input
           type="text"
           name="test"
@@ -132,7 +152,7 @@ const App: Component = () => {
             </>
           )}
         </For>
-      </div>
+      </div> */}
     </div>
   );
 };

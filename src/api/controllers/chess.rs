@@ -63,7 +63,6 @@ pub async fn handle_socket(
 
     //Subscribing to our broadcast channel.
     let mut rx = state.lock().await.tx.subscribe();
-    println!("{} connected to websocket", addr);
 
     //Socket splitting to both send and receive at the same time.
     let (sender, mut receiver) = socket.split();
