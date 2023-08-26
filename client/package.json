@@ -16,7 +16,9 @@
     "vite-plugin-solid": "^2.7.0"
   },
   "dependencies": {
+    "@types/three": "^0.155.1",
     "short-unique-id": "^4.4.4",
-    "solid-js": "^1.7.6"
+    "solid-js": "^1.7.6",
+    "three": "^0.155.0"
   }
 }

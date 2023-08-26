@@ -60,8 +60,6 @@ pub async fn handle_socket(
     mut listener: PgListener,
 ) {
     let code = Arc::new(Mutex::new(String::new()));
-    let player_one = Arc::new(Mutex::new(String::new()));
-    let player_two = Arc::new(Mutex::new(String::new()));
 
     //Subscribing to our broadcast channel.
     let mut rx = state.lock().await.tx.subscribe();
@@ -204,18 +202,16 @@ pub async fn handle_socket(
                             }
                             //Handler for actually starting a match.
                             "Start" => {
-                                let result = sqlx::query(
-                                    "SELECT * FROM matches WHERE code = $1"
-                                )
-                                .bind(&parsed.table_code)
-                                .fetch_one(&state.lock().await.pool)
-                                .await
-                                .expect("Could not start match");
-
+                                let result = sqlx::query("SELECT * FROM matches WHERE code = $1")
+                                    .bind(&parsed.table_code)
+                                    .fetch_one(&state.lock().await.pool)
+                                    .await
+                                    .expect("Could not start match");
                                 if !result.is_empty() {
-                                    *player_one.lock().await = result.get("user_one_code");
-                                    *player_two.lock().await = result.get("user_two_code");
+                                    parsed.msg_type = String::from("Start");
                                 }
+                            }
+                            "Movement" => {
                             }
                             //Handler for Deleting matches from database..
                             "Delete" => {

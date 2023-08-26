@@ -2,17 +2,16 @@ import { createSignal, type Component, For } from "solid-js";
 import styles from "./styles/App.module.css";
 import ShortUniqueId from "short-unique-id";
 import { MatchesData, MessageReceived } from "./utils/types";
+import ChessMatch from "./ChessMatch";
+import { TableCode, UserCode, setIncomingMovement, setTableCode, setUserCode } from "./utils/sharedSignals";
 
 const App: Component = () => {
-  const [TableCode, setTableCode] = createSignal<string>("");
   const [Code, setCode] = createSignal<string>("");
   const [InputMessage, setInputMessage] = createSignal<string>("");
-  const [ReceivedMessage, setReceivedMessage] = createSignal<string>("");
   const [AvailableMatches, setAvailableMatches] = createSignal<MatchesData[]>(
     []
   );
   const [Waiting, setWaiting] = createSignal<boolean>(false);
-  const [UserCode, setUserCode] = createSignal<string>("");
   const [StartMatch, setStartMatch] = createSignal<boolean>(false);
 
   const server = new WebSocket("ws://127.0.0.1:8000/ws");
@@ -75,12 +74,15 @@ const App: Component = () => {
     } else if (parsed.msg_type == "Delete") {
       setTableCode("");
     } else if (parsed.msg_type == "Movement") {
-      setReceivedMessage(parsed.msg);
+      console.log(parsed)
+      setIncomingMovement(parsed.msg)
     } else if (parsed.msg_type == "Matches") {
-      setReceivedMessage("");
+      setIncomingMovement("")
       setAvailableMatches(JSON.parse(parsed.msg));
     } else if (parsed.msg_type == "PgNotification") {
       setAvailableMatches([...AvailableMatches(), JSON.parse(parsed.msg)]);
+    } else if (parsed.msg_type == "Start") {
+      setStartMatch(true)
     }
   });
 
@@ -106,7 +108,7 @@ const App: Component = () => {
       {StartMatch()
       ?
         <div class={styles.MatchContainer}>
-          <h1>Match Started!</h1>
+          <ChessMatch server={server}/>
         </div>
       :
       <div class={styles.AppHeader}>
@@ -140,6 +142,11 @@ const App: Component = () => {
               <p>
                 Your table code is <span>{TableCode()}</span>
               </p>
+              <div class={styles.WaitingSignal}>
+                <h1>.</h1>
+                <h1>.</h1>
+                <h1>.</h1>
+              </div>
             </div>
           </div>
         )}
