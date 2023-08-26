@@ -1,8 +1,8 @@
-import { createSignal, type Component, For } from "solid-js";
+import { createSignal, type Component, For, lazy } from "solid-js";
 import styles from "./styles/App.module.css";
 import ShortUniqueId from "short-unique-id";
 import { MatchesData, MessageReceived } from "./utils/types";
-import ChessMatch from "./ChessMatch";
+const ChessMatch = lazy(() => import("./ChessMatch"))
 import { TableCode, UserCode, setIncomingMovement, setTableCode, setUserCode } from "./utils/sharedSignals";
 
 const App: Component = () => {

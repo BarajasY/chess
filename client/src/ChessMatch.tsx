@@ -1,7 +1,7 @@
 import { Component, onMount } from "solid-js";
 import style from "./styles/ChessMatch.module.css";
 import { IncomingMovement, TableCode, UserCode } from "./utils/sharedSignals";
-import { match, renderer } from "./three/main";
+import { renderer } from "./three/main";
 
 interface Props {
     server: WebSocket
@@ -10,7 +10,7 @@ interface Props {
 const ChessMatch: Component<Props> = ({server}) => {
 
     onMount(() => {
-        match?.appendChild(renderer.domElement)
+      document.body.appendChild(renderer.domElement)
     })
 
     const sendMessage = () => {
