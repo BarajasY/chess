@@ -15,7 +15,7 @@ pub struct AppState {
 //Unites both broadcast channels, PG Pool and PG Listener.
 pub async fn make_state() -> Arc<Mutex<AppState>> {
     let (tx, rx) = mpsc::channel(5);
-    let (sender, _receiver) = broadcast::channel(100);
+    let (sender, _receiver) = broadcast::channel(1000);
     let pool = get_db_pool().await;
 
     Arc::new(Mutex::new( AppState {

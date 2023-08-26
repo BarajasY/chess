@@ -61,12 +61,13 @@ pub async fn handle_socket(
 ) {
     let code = Arc::new(Mutex::new(String::new()));
 
-    //Subscribing to our broadcast channel.
+    //Subscribing to our broadcast channel for global communication.
     let mut rx = state.lock().await.tx.subscribe();
 
     //Socket splitting to both send and receive at the same time.
     let (sender, mut receiver) = socket.split();
 
+    //Generating arc mutex of sender to use it in multiple functions.
     let sender2 = Arc::new(Mutex::new(sender));
 
     //Listen to postgreSQl in channel "test_row_added"
@@ -100,6 +101,7 @@ pub async fn handle_socket(
     };
 
     let initial_sender = sender2.clone();
+    //Sends to client matches currently in our database.
     initial_sender
         .lock()
         .await
@@ -113,9 +115,6 @@ pub async fn handle_socket(
         let msg_sender = sender2.clone();
         tokio::spawn(async move {
             while let Ok(msg) = rx.recv().await {
-                //WIP ADD START FUNCTIONALITY...
-                //
-                //
                 let parsed: WSMessage = from_str(msg.as_str()).unwrap();
                 let code_guard = code.lock().await;
                 if code_guard.clone() == parsed.table_code {
@@ -247,7 +246,6 @@ pub async fn handle_socket(
                     }
                     //Close websocket request.
                     Message::Close(_) => {
-                        println!("{} closed connection", addr);
                         let code_guard = code.lock().await;
                         //If user had a table code when closing ws, it means they exited mid-match so we need to delete the match from our database.
                         if !code_guard.is_empty() {

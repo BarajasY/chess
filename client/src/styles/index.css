@@ -27,3 +27,9 @@ body {
   --ddwhite: #ffffff2f;
   --navy: #a39869;
 }
+
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}

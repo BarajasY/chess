@@ -107,9 +107,7 @@ const App: Component = () => {
     <div class={styles.AppContainer}>
       {StartMatch()
       ?
-        <div class={styles.MatchContainer}>
           <ChessMatch server={server}/>
-        </div>
       :
       <div class={styles.AppHeader}>
         <h1>Chessing</h1>
