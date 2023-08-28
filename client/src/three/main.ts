@@ -1,11 +1,11 @@
 import * as THREE from "three";
-import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
-import { pawnsFormation } from "./Pawn";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { MakeBoard } from "./board";
 import { formRooks } from "./rook";
 import { formKnights } from "./knight";
 import { formBishops } from "./bishop";
 import { king, queen } from "./kingQueen";
+import { pawnsFormation } from "./Pawn";
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color("#404040")
@@ -16,18 +16,15 @@ pointlight.position.x = 7;
 pointlight.position.z = 7;
 pointlight.position.y = 4;
 scene.add(pointlight);
-/*
-export const ambientlight = new THREE.AmbientLight(0xffffff, 3);
-scene.add(ambientlight); */
 
-export const camera = new THREE.PerspectiveCamera(100, window.innerWidth/window.innerHeight, .1, 1000);
-camera.position.x = 7;
-camera.position.z = 7
+export const camera = new THREE.PerspectiveCamera(100, window.innerWidth / window.innerHeight, .1, 1000)
+camera.position.set(7, 12, 5);
+camera.rotation.set(-1, 0, 3, "XYZ");
 
 export const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type =THREE.PCFShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 
 export const controls = new OrbitControls(camera, renderer.domElement);
 controls.maxDistance = 15
@@ -39,6 +36,7 @@ const pawns = pawnsFormation();
 const rooks = formRooks();
 const knights = formKnights();
 const bishops = formBishops();
+
 
 for (let i = 0; i < pawns.length; i++) {
     scene.add(pawns[i])
@@ -63,10 +61,19 @@ for (let i = 0; i < knights.length; i++) {
 scene.add(king)
 scene.add(queen)
 
+
+
 function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
+        controls.update();
     renderer.render(scene, camera);
+    requestAnimationFrame(animate);
 }
 animate();
 
+
+window.addEventListener("resize", (e) => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+})
