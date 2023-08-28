@@ -1,10 +1,10 @@
 import * as THREE from "three";
 
 const geometry = new THREE.DodecahedronGeometry(.8)
-const material = new THREE.MeshBasicMaterial({color: 0x78ae69, wireframe: true})
+const material = new THREE.MeshStandardMaterial({color: "#27cd91"})
 
 export const formKnights = () => {
-    const knights: THREE.Mesh<THREE.DodecahedronGeometry, THREE.MeshBasicMaterial>[] = [];
+    const knights: THREE.Mesh<THREE.DodecahedronGeometry, THREE.MeshStandardMaterial>[] = [];
 
     for (let i = 0; i < 2; i++) {
         const mesh = new THREE.Mesh(geometry, material);

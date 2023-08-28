@@ -1,10 +1,10 @@
 import * as THREE from "three";
 
 export const geometry = new THREE.CapsuleGeometry(.8)
-export const material = new THREE.MeshBasicMaterial({color: 0x0c0afe, wireframe: true})
+export const material = new THREE.MeshStandardMaterial({color: "#27cd91"})
 
 export const formRooks = () => {
-    const rooks:THREE.Mesh<THREE.CapsuleGeometry, THREE.MeshBasicMaterial>[] = []
+    const rooks:THREE.Mesh<THREE.CapsuleGeometry, THREE.MeshStandardMaterial>[] = []
 
     for (let i = 0; i < 2; i++) {
         const mesh = new THREE.Mesh(geometry, material);
