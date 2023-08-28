@@ -1,7 +1,11 @@
 import * as THREE from "three";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
-import { pawn } from "./Pawn";
+import { pawnsFormation } from "./Pawn";
 import { MakeBoard } from "./board";
+import { formRooks } from "./rook";
+import { formKnights } from "./knight";
+import { formBishops } from "./bishop";
+import { king, queen } from "./kingQueen";
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color("#404040")
@@ -20,18 +24,37 @@ controls.maxDistance = 15
 
 export let match = document.getElementById("match");
 
-export const board = MakeBoard();
-console.log(board);
+const board = MakeBoard();
+const pawns = pawnsFormation();
+const rooks = formRooks();
+const knights = formKnights();
+const bishops = formBishops();
 
-scene.add(pawn);
+for (let i = 0; i < pawns.length; i++) {
+    scene.add(pawns[i])
+}
+
+for (let i = 0; i < rooks.length; i++) {
+    scene.add(rooks[i])
+}
 
 for (let i = 0; i < board.length; i++) {
     scene.add(board[i])
 }
 
+for (let i = 0; i < bishops.length; i++) {
+    scene.add(bishops[i])
+}
+
+for (let i = 0; i < knights.length; i++) {
+    scene.add(knights[i])
+}
+
+scene.add(king)
+scene.add(queen)
+
 function animate() {
     requestAnimationFrame(animate);
-    pawn.rotation.y += .001;
     controls.update();
     renderer.render(scene, camera);
 }
