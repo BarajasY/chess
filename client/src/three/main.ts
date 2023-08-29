@@ -5,7 +5,7 @@ import { formRooks } from "./rook";
 import { formKnights } from "./knight";
 import { formBishops } from "./bishop";
 import { king, queen } from "./kingQueen";
-import { pawnsFormation } from "./Pawn";
+import { pawnsFormation } from "./pawn";
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color("#404040")
@@ -60,8 +60,6 @@ for (let i = 0; i < knights.length; i++) {
 
 scene.add(king)
 scene.add(queen)
-
-
 
 function animate() {
         controls.update();

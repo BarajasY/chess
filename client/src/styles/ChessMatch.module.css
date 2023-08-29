@@ -16,4 +16,5 @@
     height: 100vh;
     position: absolute;
     background: none;
+    z-index: 1;
 }
