@@ -6,12 +6,23 @@
 .BlackTile, .WhiteTile {
     width: 50px;
     height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .BlackTile {
-    background-color: black;
+    /* background-color: rgb(38, 38, 38); */
+    background: #354688;
 }
 
 .WhiteTile {
-    background-color: white;
+    /* background-color: white; */
+    background: #3276f7;
+}
+
+.BlackTile img, .WhiteTile img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
 }

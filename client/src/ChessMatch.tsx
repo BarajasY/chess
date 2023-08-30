@@ -2,16 +2,13 @@ import { Component, onMount } from "solid-js";
 import style from "./styles/ChessMatch.module.css";
 import { IncomingMovement, TableCode, UserCode } from "./utils/sharedSignals";
 import { renderer } from "./three/main";
-import { MakeChess } from "./utils/ChessBoard";
+import { Chessboard } from "./utils/ChessBoard";
 
 interface Props {
   server: WebSocket;
 }
 
 const ChessMatch: Component<Props> = ({ server }) => {
-/*   onMount(() => {
-    document.body.appendChild(renderer.domElement);
-  }); */
 
   const sendMessage = () => {
     server.send(
@@ -24,12 +21,12 @@ const ChessMatch: Component<Props> = ({ server }) => {
     );
   };
 
+  const board = new Chessboard();
+
   return (
     <div class={style.ChessWrapper}>
       <div class={style.ChessContent} id="match">
-        <MakeChess />
-{/*         <h1 onclick={() => sendMessage()}>wasd</h1>
-        {IncomingMovement()} */}
+        {board.init()}
       </div>
     </div>
   );

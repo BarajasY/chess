@@ -11,3 +11,8 @@ export type MatchesData = {
     user_two_code: string | undefined,
     open: boolean
 }
+
+export type Coordinates = {
+    x: number,
+    y: number
+}
