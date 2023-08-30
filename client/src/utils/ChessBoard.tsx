@@ -98,11 +98,11 @@ const formPiece = (y: number, x: number): [string | null, Symbol | null] => {
 
 export const handleTileClick = (piece: Symbol, x: number, y: number) => {
   if (piece == PiecesEnum.BPawn) {
-    setMovableCoords(AddCoordinates(piece, x, y))
+    setMovableCoords(AddMovableCoordinates(piece, x, y))
   }
 };
 
-export const AddCoordinates = (piece:Symbol, x:number, y:number): Coordinates[] => {
+export const AddMovableCoordinates = (piece:Symbol, x:number, y:number): Coordinates[] => {
   let coords:Coordinates[] = [];
   if (piece == PiecesEnum.BPawn) {
     coords.push({x: x, y: y+1})
@@ -112,11 +112,43 @@ export const AddCoordinates = (piece:Symbol, x:number, y:number): Coordinates[] 
     coords.push({x: x, y: y-1})
     coords.push({x: x, y: y-2})
   }
+  if (piece == PiecesEnum.Bishop) {
+    for (let i = 0; i < 8; i++) {
+      coords.push({x:x+i, y:y+i})
+      coords.push({x:x+i, y:y-i})
+      coords.push({x:x-i, y:y+i})
+      coords.push({x:x-i, y:y-i})
+    }
+  }
+  if (piece == PiecesEnum.Rook) {
+    for (let i = 0; i < 8; i++) {
+      coords.push({x: x, y: y+i})
+      coords.push({x: x+i, y: y})
+      coords.push({x: x, y: y-i})
+      coords.push({x: x-i, y: y})
+    }
+  }
+  if (piece == PiecesEnum.Knight) {
+    coords.push({x:+1, y: y-2})
+    coords.push({x:-1, y: y-2})
+    coords.push({x:+2, y: y+1})
+    coords.push({x:+2, y: y-1})
+    coords.push({x:+1, y: y+2})
+    coords.push({x:-1, y: y+2})
+    coords.push({x:-2, y: y+1})
+    coords.push({x:-2, y: y-1})
+  }
+  if(piece == PiecesEnum.Queen) {
+
+  }
 
   return coords;
 }
 
 export const BlackTile: Component<tileProps> = (props: tileProps) => {
+  if(props.piece != null) {
+    NonMovableCoords().push({x:props.x, y:props.y})
+  }
   return (
     <div class={style.BlackTile} onClick={() => console.log(props)}>
       {props.img == null ? null : <img src={props.img} alt="Chess Piece" />}
@@ -125,6 +157,9 @@ export const BlackTile: Component<tileProps> = (props: tileProps) => {
 };
 
 export const WhiteTile: Component<tileProps> = (props: tileProps) => {
+  if(props.piece != null) {
+    NonMovableCoords().push({x:props.x, y:props.y})
+  }
   return (
     <div class={style.WhiteTile} onClick={() => console.log(props)}>
       {props.img == null ? null : <img src={props.img} alt="Chess Piece" />}
@@ -136,24 +171,15 @@ export class Chessboard {
   init() {
     const total: number = 8;
     const tileArray: JSXElement[] = [];
-    let coordinates: Coordinates = {x: 0, y: 0};
 
     for (let i = 0; i < total; i++) {
       for (let j = 0; j < total; j++) {
         //At the start, no pieces in the middle rows.
         let [img, piece] = formPiece(i, j);
         if ( (i + j) % 2 == 0) {
-          coordinates.x = j;
-          coordinates.y = i;
           tileArray.push(<WhiteTile x={j} y={i} img={img} piece={piece} />)
-          NonMovableCoords().push(coordinates)
-          /*           setNonMovableCoords([...NonMovableCoords(), coordinates]) */
         } else {
-          coordinates.x = j;
-          coordinates.y = i;
           tileArray.push(<BlackTile x={j} y={i} img={img} piece={piece} />);
-          NonMovableCoords().push(coordinates)
-/*           setNonMovableCoords([...NonMovableCoords(), coordinates]) */
         }
       }
     }
