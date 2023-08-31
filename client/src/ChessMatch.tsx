@@ -1,9 +1,8 @@
-import { Component, onMount } from "solid-js";
+import { Component, JSXElement, onMount } from "solid-js";
 import style from "./styles/ChessMatch.module.css";
-import { IncomingMovement, TableCode, UserCode } from "./utils/sharedSignals";
-import { renderer } from "./three/main";
-import { Chessboard } from "./utils/ChessBoard";
-
+import { IncomingMovement, TableCode, TileArray, UserCode } from "./utils/sharedSignals";
+import { Chessboard, PiecesEnum, WhiteTile } from "./utils/ChessBoard";
+import pawn_w from "./assets/pawn_w.png"
 interface Props {
   server: WebSocket;
 }
