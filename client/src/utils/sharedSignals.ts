@@ -12,3 +12,6 @@ export const [SelectedTileX, setSelectedTileX] = createSignal<number>();
 export const [SelectedTileY, setSelectedTileY] = createSignal<number>();
 export const [MovableCoords, setMovableCoords] = createSignal<Coordinates[]>([]);
 export const [NonMovableCoords, setNonMovableCoords] = createSignal<Coordinates[]>([]);
+export const [AllCoords, setAllCoords] = createSignal<Coordinates[]>([]);
+export const [MovableTiles, setMovableTiles] = createSignal<HTMLElement[] | null>([]);
+export const [NonMovableCoordsMap, setNonMovableCoordsMap] = createSignal<Map<string, boolean>>(new Map());
