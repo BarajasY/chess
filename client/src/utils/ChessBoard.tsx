@@ -14,17 +14,22 @@ import w_knight from "../assets/knight_w.png";
 import b_knight from "../assets/knight_b.png";
 import {
   AllCoords,
+  AllPieces,
   FirstClick,
   MovableCoords,
   MovableCoordsMap,
   MovableTiles,
-  NonMovableCoords,
+/*   NonMovableCoords, */
   NonMovableCoordsMap,
+  SelectedTileImg,
+  SelectedTileX,
+  SelectedTileY,
   TileArray,
   setFirstClick,
   setMovableCoords,
   setMovableTiles,
   setNonMovableCoords,
+  setSelectedTileImg,
   setSelectedTilePiece,
   setSelectedTileX,
   setSelectedTileY,
@@ -112,7 +117,7 @@ const formPiece = (y: number, x: number): [string | null, Symbol | null] => {
   return [img, piece];
 };
 
-export const handleTileClick = (piece: Symbol | null, x: number, y: number) => {
+export const handleTileClick = (piece: Symbol | null, x: number, y: number, img:string | null) => {
   if (piece != null) {
     setFirstClick(true)
     if (FirstClick()) {
@@ -121,11 +126,15 @@ export const handleTileClick = (piece: Symbol | null, x: number, y: number) => {
       setSelectedTileX(x)
       setSelectedTileY(y)
       setSelectedTilePiece(piece);
+      setSelectedTileImg(img!)
     }
   } else {
     if(FirstClick()) {
       if(MovableCoordsMap().has(`${x}${y}`)) {
-        console.log("Movement")
+        makeMovement(piece, x, y, img!)
+        MovableCoordsMap().delete(`${x}${y}`)
+        MovableCoordsMap().set(`${SelectedTileX()}${SelectedTileY()}`, true)
+        AddMovableCoordinates(piece, x, y)
       }
       setFirstClick(false);
       setMovableCoords([])
@@ -133,17 +142,33 @@ export const handleTileClick = (piece: Symbol | null, x: number, y: number) => {
       setSelectedTilePiece(undefined)
       setSelectedTileX(undefined)
       setSelectedTileY(undefined)
+      setSelectedTileImg(undefined)
     }
   }
+  console.log({piece, x, y, img});
+  console.log(MovableCoords())
+  console.log(MovableTiles())
+  console.log(NonMovableCoordsMap())
+  console.log(MovableCoordsMap())
 };
 
-export const makeMovement = (piece: Symbol | null, x:number, y:number) => {
+export const makeMovement = (piece: Symbol | null, x:number, y:number, img:string) => {
+  let currentTile = document.getElementById(`${SelectedTileX()}${SelectedTileY()}`)
+  let newTile = document.getElementById(`${x}${y}`);
 
+  let image = document.createElement("img")
+  image.src = SelectedTileImg()!;
+  image.id = `${x}${y}_img`
+
+  let currentTileImage = document.getElementById(`${SelectedTileX()}${SelectedTileY()}_img`)
+
+  newTile?.appendChild(image)
+  currentTile?.removeChild(currentTileImage!)
 }
 
 export const updateTiles = () => {
   MovableTiles()?.forEach((tile) =>
-    tile.setAttribute("style", "opacity: 100%")
+    tile.setAttribute("style", "border: 2px solid transparent")
   );
 
   setMovableTiles([]);
@@ -328,34 +353,35 @@ export const AddMovableCoordinates = (
 
 export const BlackTile: Component<tileProps> = (props: tileProps) => {
   if (props.piece) {
-    NonMovableCoords().push({ x: props.x, y: props.y });
     NonMovableCoordsMap().set(`${props.x}${props.y}`, true);
   }
   const id = `${props.x}${props.y}`;
+  const id_image = `${id}_img`;
   return (
     <div
       class={style.BlackTile}
-      onClick={() => handleTileClick(props.piece, props.x, props.y)}
+      onClick={() => handleTileClick(props.piece, props.x, props.y, props.img)}
       id={id}
     >
-      {props.img == null ? null : <img src={props.img} alt="Chess Piece" />}
+      {props.img == null ? null : <img src={props.img} alt="Chess Piece" id={id_image}/>}
     </div>
   );
 };
 
 export const WhiteTile: Component<tileProps> = (props: tileProps) => {
   if (props.piece) {
-    NonMovableCoords().push({ x: props.x, y: props.y });
+/*     NonMovableCoords().push({ x: props.x, y: props.y }); */
     NonMovableCoordsMap().set(`${props.x}${props.y}`, true);
   }
   const id = `${props.x}${props.y}`;
+  const id_image = `${id}_img`;
   return (
     <div
       class={style.WhiteTile}
-      onClick={() => handleTileClick(props.piece, props.x, props.y)}
+      onClick={() => handleTileClick(props.piece, props.x, props.y, props.img)}
       id={id}
     >
-      {props.img == null ? null : <img src={props.img} alt="Chess Piece"/>}
+      {props.img == null ? null : <img src={props.img} alt="Chess Piece" id={id_image}/>}
     </div>
   );
 };
@@ -366,11 +392,13 @@ export class Chessboard {
 
     for (let i = 0; i < total; i++) {
       for (let j = 0; j < total; j++) {
-        //At the start, no pieces in the middle rows.
+        //Returns the image and piece according to coordinates.
         let [img, piece] = formPiece(i, j);
         if ((i + j) % 2 == 0) {
+          //White tile
           TileArray().push(<WhiteTile x={j} y={i} img={img} piece={piece} />);
         } else {
+          //Black tile
           TileArray().push(<BlackTile x={j} y={i} img={img} piece={piece} />);
         }
         AllCoords().push({ x: j, y: i });
