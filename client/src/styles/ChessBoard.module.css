@@ -28,6 +28,8 @@
     height: 50px;
     object-fit: cover;
     transition: .2s;
+    z-index: 1;
+    position: relative;
 }
 
 .SelectedTile {

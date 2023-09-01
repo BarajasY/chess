@@ -16,3 +16,9 @@ export type Coordinates = {
     x: number,
     y: number
 }
+
+export type ChessPiece = {
+    img: string,
+    coordinates: Coordinates,
+    type: Symbol,
+}
