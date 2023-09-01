@@ -1,16 +1,16 @@
 import { JSXElement, createSignal } from "solid-js";
-import { Group } from "three";
-import { Coordinates } from "./types";
+import { ChessPiece, Coordinates } from "./types";
 
 export const [TableCode, setTableCode] = createSignal<string>("");
 export const [UserCode, setUserCode] = createSignal<string>("");
 export const [IncomingMovement, setIncomingMovement] = createSignal<string>("");
 
-export const [ChessModel, setChessModel] = createSignal<Group>();
-
 export const [SelectedTileX, setSelectedTileX] = createSignal<number>();
 export const [SelectedTileY, setSelectedTileY] = createSignal<number>();
 export const [SelectedTilePiece, setSelectedTilePiece] = createSignal<Symbol>();
+export const [SelectedTileImg, setSelectedTileImg] = createSignal<string>();
+
+export const [AllPieces, setAllPieces] = createSignal<ChessPiece[]>([]);
 
 export const [MovableCoords, setMovableCoords] = createSignal<Coordinates[]>([]);
 export const [NonMovableCoords, setNonMovableCoords] = createSignal<Coordinates[]>([]);
