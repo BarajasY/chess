@@ -18,7 +18,18 @@ export type Coordinates = {
 }
 
 export type ChessPiece = {
-    img: string,
+    img: string | null,
     coordinates: Coordinates,
-    type: Symbol,
+    type: Symbol | null,
+    tile: Symbol | null,
+    team: Symbol | null
 }
+
+export interface tileProps {
+    img: string | null;
+    x: number;
+    y: number;
+    piece: Symbol | null;
+    index: number;
+    team: Symbol | null;
+  }

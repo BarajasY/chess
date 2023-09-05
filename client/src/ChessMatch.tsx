@@ -1,14 +1,20 @@
-import { Component, JSXElement, onMount } from "solid-js";
+import { Component } from "solid-js";
 import style from "./styles/ChessMatch.module.css";
-import { IncomingMovement, TableCode, TileArray, UserCode } from "./utils/sharedSignals";
-import { Chessboard, PiecesEnum, WhiteTile } from "./utils/ChessBoard";
-import pawn_w from "./assets/pawn_w.png"
+import {
+  AllPieces,
+  IncomingMovement,
+  TableCode,
+  TileArray,
+  UserCode,
+  setAllPieces,
+} from "./utils/sharedSignals";
+import { Chessboard } from "./utils/ChessBoard";
+
 interface Props {
   server: WebSocket;
 }
 
 const ChessMatch: Component<Props> = ({ server }) => {
-
   const sendMessage = () => {
     server.send(
       JSON.stringify({
@@ -21,6 +27,18 @@ const ChessMatch: Component<Props> = ({ server }) => {
   };
 
   const board = new Chessboard();
+
+/*   const test = () => {
+    setAllPieces(pieces => {
+      return pieces.map((piece, i) => {
+        if(i == 5) {
+          return {...piece, img: pawn_w}
+        } else {
+          return piece
+        }
+      })
+    })
+  }; */
 
   return (
     <div class={style.ChessWrapper}>

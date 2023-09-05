@@ -9,14 +9,23 @@ export const [SelectedTileX, setSelectedTileX] = createSignal<number>();
 export const [SelectedTileY, setSelectedTileY] = createSignal<number>();
 export const [SelectedTilePiece, setSelectedTilePiece] = createSignal<Symbol>();
 export const [SelectedTileImg, setSelectedTileImg] = createSignal<string>();
+export const [SelectedTileIndex, setSelectedTileIndex] = createSignal<number>();
+export const [SelectedTileTeam, setSelectedTileTeam] = createSignal<Symbol>();
 
 export const [AllPieces, setAllPieces] = createSignal<ChessPiece[]>([]);
 
+export const [NonMovableCoordsMap, setNonMovableCoordsMap] = createSignal<Map<string, Symbol>>(new Map());
+
 export const [MovableCoords, setMovableCoords] = createSignal<Coordinates[]>([]);
+export const [AttackCoords, setAttackCoords] = createSignal<Coordinates[]>([]);
+
 export const [NonMovableCoords, setNonMovableCoords] = createSignal<Coordinates[]>([]);
 export const [AllCoords, setAllCoords] = createSignal<Coordinates[]>([]);
+
 export const [MovableTiles, setMovableTiles] = createSignal<HTMLElement[] | null>([]);
-export const [NonMovableCoordsMap, setNonMovableCoordsMap] = createSignal<Map<string, boolean>>(new Map());
+export const [AttackTiles, setAttackTiles] = createSignal<HTMLElement[] | null>([]);
+
+
 export const [MovableCoordsMap, setMovableCoordsMap] = createSignal<Map<string, boolean>>(new Map());
 export const [FirstClick, setFirstClick] = createSignal<boolean>(false);
 export const [TileArray, setTileArray] = createSignal<JSXElement[]>([]);
