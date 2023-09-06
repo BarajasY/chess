@@ -27,43 +27,48 @@ export const handleTileClick = (
   y: number,
   img: string | null,
   index: number,
-  team: Symbol | null
+  team: Symbol | null,
+  server: WebSocket
 ) => {
-  console.log(piece, x, y, img, index, team);
   if (piece != null) {
     if (FirstClick()) {
-      //Eat a piece.
-      let tempmap = new Map(NonMovableCoordsMap());
-      setAllPieces((p) => {
-        return p.map((value, i) => {
-          if (i == index) {
-            setPiecesEaten((pieces) => [
-              ...pieces,
-              {
-                img: img!,
-                coordinates: { x, y },
-                team,
-                type: piece,
-                tile: null,
-              },
-            ]);
-            return {
-              ...value,
-              img: SelectedTile()?.img!,
-              type: SelectedTile()?.type!,
-              team: SelectedTile()?.team!,
-            };
-          } else if (i == SelectedTile()?.index) {
-            tempmap.delete(
-              `${SelectedTile()?.coordinates.x}${SelectedTile()?.coordinates.y}`
-            );
-            return { ...value, img: null, type: null, team: null };
-          } else {
-            return value;
-          }
-        });
-      });
-      setNonMovableCoordsMap(tempmap);
+      //If the tile is a movable one.
+      if (MovableCoordsMap().has(`${x}${y}`)) {
+        //if the piece's team is contrary to ours.
+        if (team != SelectedTile()?.team) {
+          ////
+          let tempmap = new Map(NonMovableCoordsMap());
+          setAllPieces((pieces) => {
+            return pieces.map((piece, i) => {
+              if (i == index) {
+                tempmap.set(`${x}${y}`, SelectedTile()?.team!);
+                return {
+                  ...piece,
+                  img: SelectedTile()?.img!,
+                  team: SelectedTile()?.team!,
+                  type: SelectedTile()?.type!,
+                };
+              } else if (i == SelectedTile()?.index) {
+                tempmap.delete(
+                  `${SelectedTile()?.coordinates.x}${
+                    SelectedTile()?.coordinates.y
+                  }`
+                );
+                return { ...piece, img: null, team: null, type: null };
+              } else {
+                return piece;
+              }
+            });
+          });
+          setNonMovableCoordsMap(tempmap)
+          setFirstClick(false);
+          setMovableCoords([]);
+          setAttackCoords([]);
+          updateTiles();
+          setSelectedTile(undefined);
+          /////
+        }
+      }
     } else {
       //Show available movement options for piece.
       setFirstClick(true);

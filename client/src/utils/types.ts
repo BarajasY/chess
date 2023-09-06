@@ -40,4 +40,10 @@ export interface tileProps {
     piece: Symbol | null;
     index: number;
     team: Symbol | null;
+    server: WebSocket
   }
+
+export type WSMovementMessage = {
+    origin: Coordinates,
+    end: Coordinates
+}

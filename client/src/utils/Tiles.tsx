@@ -12,7 +12,7 @@ export const BlackTile: Component<tileProps> = (props: tileProps) => {
     <div
     class={style.BlackTile}
     onClick={() =>
-      handleTileClick(props.piece, props.x, props.y, props.img, props.index, props.team)
+      handleTileClick(props.piece, props.x, props.y, props.img, props.index, props.team, props.server)
     }
     id={id}
     >
@@ -32,7 +32,7 @@ export const WhiteTile: Component<tileProps> = (props: tileProps) => {
     <div
       class={style.WhiteTile}
       onClick={() =>
-        handleTileClick(props.piece, props.x, props.y, props.img, props.index, props.team)
+        handleTileClick(props.piece, props.x, props.y, props.img, props.index, props.team, props.server)
       }
       id={id}
     >

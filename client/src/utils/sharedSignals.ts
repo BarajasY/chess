@@ -11,6 +11,7 @@ export const [AllPieces, setAllPieces] = createSignal<ChessPiece[]>([]);
 export const [PiecesEaten, setPiecesEaten] = createSignal<ChessPiece[]>([]);
 
 export const [NonMovableCoordsMap, setNonMovableCoordsMap] = createSignal<Map<string, Symbol>>(new Map());
+export const [AttackCoordsMap, setAttackCoordsMap] = createSignal<Map<string, Symbol>>(new Map());
 
 export const [MovableCoords, setMovableCoords] = createSignal<Coordinates[]>([]);
 export const [AttackCoords, setAttackCoords] = createSignal<Coordinates[]>([]);

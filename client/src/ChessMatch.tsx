@@ -27,7 +27,7 @@ const ChessMatch: Component<Props> = ({ server }) => {
   return (
     <div class={style.ChessWrapper}>
       <div class={style.ChessContent} id="match">
-        {board.init()}
+        {board.init(server)}
       </div>
     </div>
   );

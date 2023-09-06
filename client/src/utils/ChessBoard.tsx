@@ -30,7 +30,7 @@ export const TeamEnum = {
 }
 
 export class Chessboard {
-  init() {
+  init(server:WebSocket) {
     const total: number = 8;
     let temp:Map<string, Symbol> = new Map();
 
@@ -76,6 +76,7 @@ export class Chessboard {
                   piece={piece.type}
                   index={i()}
                   team={piece.team}
+                  server={server}
                 />
               )}
               {piece.tile == TileEnum.Black && (
@@ -86,6 +87,7 @@ export class Chessboard {
                   piece={piece.type}
                   index={i()}
                   team={piece.team}
+                  server={server}
                 />
               )}
             </div>
