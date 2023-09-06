@@ -17,8 +17,10 @@ import {
   setSelectedTile,
   SelectedTile,
   setPiecesEaten,
+  TableCode,
+  UserCode,
 } from "./sharedSignals";
-import { Coordinates } from "./types";
+import { Coordinates, WSMovementMessage } from "./types";
 
 //Function whenever user clicks on a tile. /////////////////////////////////
 export const handleTileClick = (
@@ -60,6 +62,16 @@ export const handleTileClick = (
               }
             });
           });
+          const text:WSMovementMessage = {
+            origin: {x: SelectedTile()?.coordinates.x!, y: SelectedTile()?.coordinates.y!},
+            end: {x, y}
+          }
+          server.send(JSON.stringify({
+            table_code: TableCode(),
+            msg: text,
+            msg_type: "Movement",
+            user_code: UserCode()
+          }))
           setNonMovableCoordsMap(tempmap)
           setFirstClick(false);
           setMovableCoords([]);
@@ -117,6 +129,16 @@ export const handleTileClick = (
         setNonMovableCoordsMap(tempMap);
       }
     }
+    const text:WSMovementMessage = {
+      origin: {x: SelectedTile()?.coordinates.x!, y: SelectedTile()?.coordinates.y!},
+      end: {x, y}
+    }
+    server.send(JSON.stringify({
+      table_code: TableCode(),
+      msg: text,
+      msg_type: "Movement",
+      user_code: UserCode()
+    }))
     setFirstClick(false);
     setMovableCoords([]);
     setAttackCoords([]);
