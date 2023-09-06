@@ -12,11 +12,19 @@ use axum::{
 
 use futures::{sink::SinkExt, stream::StreamExt};
 use serde::{Deserialize, Serialize};
-use serde_json::{from_str, to_string};
+use serde_json::{from_str, json, to_string};
 use sqlx::{postgres::PgListener, Row};
 use tokio::sync::Mutex;
 
 use crate::api::{db::get_listener, state::AppState};
+/* #[derive(Deserialize, Serialize, Debug)]
+pub struct TempWSMessage {
+    table_code: String,
+    user_code: String,
+    msg: String,
+    msg_type: String,
+    open: Option<bool>,
+} */
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct WSMessage {
@@ -28,11 +36,43 @@ pub struct WSMessage {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
+pub struct WSMessageCoordinates {
+    table_code: String,
+    user_code: String,
+    msg: MovementCoordinates,
+    msg_type: String,
+    open: Option<bool>,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct Coordinates {
+    x: i8,
+    y: i8,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct MovementCoordinates {
+    origin: Coordinates,
+    end: Coordinates,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+enum WSMessageVariant {
+    String(String),
+    Coordinates(WSMessageCoordinates),
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub struct MatchData {
     code: String,
     user_one_code: String,
     user_two_code: Option<String>,
     open: bool,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct MsgType {
+    msg_type: String,
 }
 
 //function for test purposes.
@@ -59,6 +99,7 @@ pub async fn handle_socket(
     state: Arc<Mutex<AppState>>,
     mut listener: PgListener,
 ) {
+    //Making the code a mutable ARC with arc mutex of our websocket connection.
     let code = Arc::new(Mutex::new(String::new()));
 
     //Subscribing to our broadcast channel for global communication.
@@ -115,15 +156,30 @@ pub async fn handle_socket(
         let msg_sender = sender2.clone();
         tokio::spawn(async move {
             while let Ok(msg) = rx.recv().await {
-                let parsed: WSMessage = from_str(msg.as_str()).unwrap();
-                let code_guard = code.lock().await;
-                if code_guard.clone() == parsed.table_code {
-                    msg_sender
-                        .lock()
-                        .await
-                        .send(Message::Text(msg))
-                        .await
-                        .unwrap();
+                dbg!(&msg);
+                let msg_type: MsgType = from_str(msg.as_str()).unwrap();
+                if msg_type.msg_type == "Movement" {
+                    let parsed: WSMessageCoordinates = from_str(msg.as_str()).unwrap();
+                    let code_guard = code.lock().await;
+                    if code_guard.clone() == parsed.table_code {
+                        msg_sender
+                            .lock()
+                            .await
+                            .send(Message::Text(msg))
+                            .await
+                            .unwrap();
+                    }
+                } else {
+                    let parsed: WSMessage = from_str(msg.as_str()).unwrap();
+                    let code_guard = code.lock().await;
+                    if code_guard.clone() == parsed.table_code {
+                        msg_sender
+                            .lock()
+                            .await
+                            .send(Message::Text(msg))
+                            .await
+                            .unwrap();
+                    }
                 }
             }
         })
@@ -152,18 +208,21 @@ pub async fn handle_socket(
         })
     };
 
-    //Function that fires when a message is received.
+    //Function that allows the websocket to receive a message
     let mut receive_msg = {
         tokio::spawn(async move {
             while let Some(Ok(msg)) = receiver.next().await {
                 match msg {
                     //Print text.
                     Message::Text(t) => {
-                        let mut parsed: WSMessage = from_str(t.as_str()).unwrap();
+                        let test: MsgType = from_str(t.as_str()).unwrap();
+                        let mut serialized = String::new();
                         //Handler for type of message CTable. This piece of code creates a row in our matches table.
-                        match parsed.msg_type.as_str() {
+                        match test.msg_type.as_str() {
                             /* This query will create a new row inside our database. Only the table code and the first player code will be filled at this point */
                             "CTable" => {
+                                let mut parsed: WSMessage = from_str(t.as_str()).unwrap();
+
                                 let result = sqlx::query(
                                     "INSERT INTO matches (code, user_one_code, open) VALUES ($1, $2, $3);",
                                 )
@@ -180,9 +239,11 @@ pub async fn handle_socket(
                                     *code_guard = parsed.table_code.clone();
                                     parsed.msg = String::from("Created Table!");
                                 }
+                                serialized = to_string(&parsed).unwrap();
                             }
                             //Handler for type of message JTable, basically controls how a user joins a table.
                             "JTable" => {
+                                let mut parsed: WSMessage = from_str(t.as_str()).unwrap();
                                 /* This query edits a row from our database only to insert the code of the second player. */
                                 let result = sqlx::query(
                                     "UPDATE matches SET user_two_code = $1 WHERE code = $2;",
@@ -198,9 +259,11 @@ pub async fn handle_socket(
                                     *code_guard = parsed.table_code.clone();
                                     parsed.msg = String::from("Joined Table");
                                 }
+                                serialized = to_string(&parsed).unwrap();
                             }
                             //Handler for actually starting a match.
                             "Start" => {
+                                let mut parsed: WSMessage = from_str(t.as_str()).unwrap();
                                 let result = sqlx::query("SELECT * FROM matches WHERE code = $1")
                                     .bind(&parsed.table_code)
                                     .fetch_one(&state.lock().await.pool)
@@ -209,11 +272,17 @@ pub async fn handle_socket(
                                 if !result.is_empty() {
                                     parsed.msg_type = String::from("Start");
                                 }
+                                serialized = to_string(&parsed).unwrap();
                             }
+                            //Fired when a user makes a movement mid-match.
                             "Movement" => {
+                                let parsed: WSMessageCoordinates = from_str(t.as_str()).unwrap();
+                                serialized = to_string(&parsed).unwrap();
+                                dbg!(&parsed);
                             }
                             //Handler for Deleting matches from database..
                             "Delete" => {
+                                let parsed: WSMessage = from_str(t.as_str()).unwrap();
                                 sqlx::query("DELETE FROM matches WHERE code = $1;")
                                     .bind(&parsed.table_code)
                                     .execute(&state.lock().await.pool)
@@ -222,14 +291,15 @@ pub async fn handle_socket(
                                 let mut code_guard = code.lock().await;
                                 //Empties current table code state.
                                 *code_guard = String::new();
+                                serialized = to_string(&parsed).unwrap();
                             }
                             &_ => {
                                 println!("Code not found");
                             }
                         }
                         // Serialize edited message to send it to client.
-                        let serialized = serde_json::to_string(&parsed).unwrap();
                         // Send edited message to client (send_msg function)
+                        dbg!(&serialized);
                         let _ = state.lock().await.tx.send(serialized);
                     }
                     //Print binaries
