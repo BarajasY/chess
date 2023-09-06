@@ -3,24 +3,20 @@ import {
   setFirstClick,
   FirstClick,
   setMovableCoords,
-  setSelectedTileX,
-  setSelectedTileY,
-  setSelectedTilePiece,
-  setSelectedTileImg,
-  setSelectedTileIndex,
   MovableCoordsMap,
   NonMovableCoordsMap,
   setAllPieces,
-  SelectedTileImg,
-  SelectedTileIndex,
   setNonMovableCoordsMap,
   MovableCoords,
   MovableTiles,
   setMovableTiles,
-  SelectedTilePiece,
-  setSelectedTileTeam,
-  SelectedTileTeam,
   setAttackCoords,
+  AttackCoords,
+  AttackTiles,
+  setAttackTiles,
+  setSelectedTile,
+  SelectedTile,
+  setPiecesEaten,
 } from "./sharedSignals";
 import { Coordinates } from "./types";
 
@@ -33,21 +29,61 @@ export const handleTileClick = (
   index: number,
   team: Symbol | null
 ) => {
+  console.log(piece, x, y, img, index, team);
   if (piece != null) {
-    setFirstClick(true);
-    updateTiles();
-    setSelectedTileX(x);
-    setSelectedTileY(y);
-    setSelectedTilePiece(piece);
-    setSelectedTileImg(img!);
-    setSelectedTileIndex(index);
-    setSelectedTileTeam(team!);
-
-    let tempcoordinates = AddMovableCoordinates(piece, x, y);
-
-    setMovableCoords(tempcoordinates[0]);
-    setAttackCoords(tempcoordinates[1]);
+    if (FirstClick()) {
+      //Eat a piece.
+      let tempmap = new Map(NonMovableCoordsMap());
+      setAllPieces((p) => {
+        return p.map((value, i) => {
+          if (i == index) {
+            setPiecesEaten((pieces) => [
+              ...pieces,
+              {
+                img: img!,
+                coordinates: { x, y },
+                team,
+                type: piece,
+                tile: null,
+              },
+            ]);
+            return {
+              ...value,
+              img: SelectedTile()?.img!,
+              type: SelectedTile()?.type!,
+              team: SelectedTile()?.team!,
+            };
+          } else if (i == SelectedTile()?.index) {
+            tempmap.delete(
+              `${SelectedTile()?.coordinates.x}${SelectedTile()?.coordinates.y}`
+            );
+            return { ...value, img: null, type: null, team: null };
+          } else {
+            return value;
+          }
+        });
+      });
+      setNonMovableCoordsMap(tempmap);
+    } else {
+      //Show available movement options for piece.
+      setFirstClick(true);
+      setSelectedTile((value) => {
+        return {
+          ...value,
+          img,
+          coordinates: { x: x, y: y },
+          type: piece,
+          team,
+          index,
+        };
+      });
+      let tempcoordinates = AddMovableCoordinates(piece, x, y);
+      setMovableCoords(tempcoordinates[0]);
+      setAttackCoords(tempcoordinates[1]);
+      updateTiles();
+    }
   } else {
+    //Move piece to the designated position.
     if (FirstClick()) {
       if (MovableCoordsMap().has(`${x}${y}`)) {
         let tempMap = new Map(NonMovableCoordsMap());
@@ -57,16 +93,17 @@ export const handleTileClick = (
             if (i == index) {
               tempMap.set(
                 `${value.coordinates.x}${value.coordinates.y}`,
-                team!
+                SelectedTile()?.team!
               );
               return {
                 ...value,
-                img: SelectedTileImg()!,
-                type: SelectedTilePiece()!,
+                img: SelectedTile()?.img!,
+                type: SelectedTile()?.type!,
+                team: SelectedTile()?.team!,
               };
-            } else if (i == SelectedTileIndex()) {
+            } else if (i == SelectedTile()?.index) {
               tempMap.delete(`${value.coordinates.x}${value.coordinates.y}`);
-              return { ...value, img: null, type: null };
+              return { ...value, img: null, type: null, team: null };
             } else {
               return value;
             }
@@ -74,15 +111,12 @@ export const handleTileClick = (
         });
         setNonMovableCoordsMap(tempMap);
       }
-      setFirstClick(false);
-      setMovableCoords([]);
-      updateTiles();
-      setSelectedTilePiece(undefined);
-      setSelectedTileX(undefined);
-      setSelectedTileY(undefined);
-      setSelectedTileImg(undefined);
-      setSelectedTileTeam(undefined);
     }
+    setFirstClick(false);
+    setMovableCoords([]);
+    setAttackCoords([]);
+    updateTiles();
+    setSelectedTile(undefined);
   }
 };
 
@@ -92,7 +126,19 @@ export const updateTiles = () => {
     tile.setAttribute("style", "border: 2px solid transparent")
   );
 
+  AttackTiles()?.forEach((tile) =>
+    tile?.setAttribute("style", "border: 2px solid transparent")
+  );
+
+  setAttackTiles([]);
   setMovableTiles([]);
+
+  for (let i = 0; i < AttackCoords().length; i++) {
+    AttackTiles()!.push(
+      document.getElementById(`${AttackCoords()[i].x}${AttackCoords()[i].y}`)!
+    );
+    AttackTiles()![i].setAttribute("style", "border: 2px solid red");
+  }
 
   for (let i = 0; i < MovableCoords().length; i++) {
     MovableTiles()!.push(
@@ -113,9 +159,10 @@ export const AddMovableCoordinates = (
   MovableCoordsMap().clear();
   let coords: Coordinates[] = [];
   let attack: Coordinates[] = [];
+  //BLACK PAWN MOVEMENT ///////////////////////////////////////////////////////////////
   if (piece == PiecesEnum.BPawn) {
     if (y != 1) {
-      if (NonMovableCoordsMap().get(`${x}${y - 1}`) != SelectedTileTeam()) {
+      if (!NonMovableCoordsMap().has(`${x}${y + 1}`)) {
         coords.push({ x: x, y: y + 1 });
       }
     } else {
@@ -127,16 +174,25 @@ export const AddMovableCoordinates = (
       }
     }
     //Detecting enemies on x - 1 and x + 1
-    if (NonMovableCoordsMap().get(`${x + 1}${y + 1}`) != SelectedTileTeam()) {
-      attack.push({ x: x + 1, y: y + 1 });
+    if (NonMovableCoordsMap().has(`${x + 1}${y + 1}`)) {
+      if (
+        NonMovableCoordsMap().get(`${x + 1}${y + 1}`) != SelectedTile()?.team
+      ) {
+        attack.push({ x: x + 1, y: y + 1 });
+      }
     }
-    if (NonMovableCoordsMap().get(`${x - 1}${y + 1}`) != SelectedTileTeam()) {
-      attack.push({ x: x - 1, y: y + 1 });
+    if (NonMovableCoordsMap().has(`${x - 1}${y + 1}`)) {
+      if (
+        NonMovableCoordsMap().get(`${x - 1}${y + 1}`) != SelectedTile()?.team
+      ) {
+        attack.push({ x: x - 1, y: y + 1 });
+      }
     }
   }
+  //WHITE PAWN MOVEMENT ///////////////////////////////////////////
   if (piece == PiecesEnum.WPawn) {
     if (y != 6) {
-      if (!NonMovableCoordsMap().get(`${x}${y - 1}`)) {
+      if (!NonMovableCoordsMap().has(`${x}${y - 1}`)) {
         coords.push({ x: x, y: y - 1 });
       }
     } else {
@@ -148,65 +204,116 @@ export const AddMovableCoordinates = (
       }
     }
     //Detecting enemies on x - 1 and x + 1
-    if (NonMovableCoordsMap().get(`${x + 1}${y - 1}`) != SelectedTileTeam()) {
-      attack.push({ x: x + 1, y: y - 1 });
+    if (NonMovableCoordsMap().has(`${x + 1}${y - 1}`)) {
+      if (
+        NonMovableCoordsMap().get(`${x + 1}${y - 1}`) != SelectedTile()?.team
+      ) {
+        attack.push({ x: x + 1, y: y - 1 });
+      }
     }
-    if (NonMovableCoordsMap().get(`${x - 1}${y - 1}`) != SelectedTileTeam()) {
-      attack.push({ x: x - 1, y: y - 1 });
+    if (NonMovableCoordsMap().has(`${x - 1}${y - 1}`)) {
+      if (
+        NonMovableCoordsMap().get(`${x - 1}${y - 1}`) != SelectedTile()?.team
+      ) {
+        attack.push({ x: x - 1, y: y - 1 });
+      }
     }
   }
+  //BISHOP MOVEMENT ///////////////////////////////////////////////
   if (piece == PiecesEnum.Bishop) {
     for (let i = 1; i <= 8; i++) {
-      if (NonMovableCoordsMap().get(`${x + i}${y + i}`)) {
+      if (NonMovableCoordsMap().has(`${x + i}${y + i}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x + i}${y + i}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x + i, y: y + i });
+        }
         break;
       }
       coords.push({ x: x + i, y: y + i });
     }
     for (let i = 1; i <= 8; i++) {
-      if (NonMovableCoordsMap().get(`${x + i}${y - i}`)) {
+      if (NonMovableCoordsMap().has(`${x + i}${y - i}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x + i}${y - i}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x + i, y: y - i });
+        }
         break;
       }
       coords.push({ x: x + i, y: y - i });
     }
     for (let i = 1; i <= 8; i++) {
-      if (NonMovableCoordsMap().get(`${x - i}${y + i}`)) {
+      if (NonMovableCoordsMap().has(`${x - i}${y + i}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x - i}${y + i}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x - i, y: y + i });
+        }
         break;
       }
       coords.push({ x: x - i, y: y + i });
     }
     for (let i = 1; i <= 8; i++) {
-      if (NonMovableCoordsMap().get(`${x - i}${y - i}`)) {
+      if (NonMovableCoordsMap().has(`${x - i}${y - i}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x - i}${y - i}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x - i, y: y - i });
+        }
         break;
       }
       coords.push({ x: x - i, y: y - i });
     }
   }
+  //ROOK MOVEMENT ///////////////////////////////////////////////
   if (piece == PiecesEnum.Rook) {
     for (let i = 1; i <= 8; i++) {
       if (NonMovableCoordsMap().get(`${x}${y + i}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x}${y + i}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x, y: y + i });
+        }
         break;
       }
       coords.push({ x: x, y: y + i });
     }
     for (let i = 1; i <= 8; i++) {
       if (NonMovableCoordsMap().get(`${x + i}${y}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x + i}${y}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x + i, y: y });
+        }
         break;
       }
       coords.push({ x: x + i, y: y });
     }
     for (let i = 1; i <= 8; i++) {
       if (NonMovableCoordsMap().get(`${x}${y - i}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x}${y - i}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x, y: y - i });
+        }
         break;
       }
       coords.push({ x: x, y: y - i });
     }
     for (let i = 1; i <= 8; i++) {
       if (NonMovableCoordsMap().get(`${x - i}${y}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x - i}${y}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x - i, y: y });
+        }
         break;
       }
       coords.push({ x: x - i, y: y });
     }
   }
+  // KNIGHT MOVEMENT ////////////////////////////////////////////
   if (piece == PiecesEnum.Knight) {
     const test: Coordinates[] = [];
     coords.push({ x: x + 2, y: y + 1 });
@@ -218,62 +325,111 @@ export const AddMovableCoordinates = (
     coords.push({ x: x - 2, y: y + 1 });
     coords.push({ x: x - 2, y: y - 1 });
     coords.forEach((coord) => {
-      if (!NonMovableCoordsMap().get(`${coord.x}${coord.y}`)) {
+      if (NonMovableCoordsMap().has(`${coord.x}${coord.y}`)) {
+        if (
+          NonMovableCoordsMap().get(`${coord.x}${coord.y}`) !==
+          SelectedTile()?.team
+        ) {
+          attack.push({ x: coord.x, y: coord.y });
+        }
+      } else {
         test.push(coord);
       }
     });
     coords = test;
   }
+  //QUEEN MOVEMENT ////////////////////////////////////////////
   if (piece == PiecesEnum.Queen) {
     for (let i = 1; i <= 8; i++) {
       if (NonMovableCoordsMap().get(`${x}${y + i}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x}${y + i}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x, y: y + i });
+        }
         break;
       }
       coords.push({ x: x, y: y + i });
     }
     for (let i = 1; i <= 8; i++) {
       if (NonMovableCoordsMap().get(`${x}${y - i}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x}${y - i}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x, y: y - i });
+        }
         break;
       }
       coords.push({ x: x, y: y - i });
     }
     for (let i = 1; i <= 8; i++) {
       if (NonMovableCoordsMap().get(`${x + i}${y}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x + i}${y}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x + i, y: y });
+        }
         break;
       }
       coords.push({ x: x + i, y: y });
     }
     for (let i = 1; i <= 8; i++) {
       if (NonMovableCoordsMap().get(`${x - i}${y}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x - i}${y}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x - i, y: y });
+        }
         break;
       }
       coords.push({ x: x - i, y: y });
     }
     for (let i = 1; i <= 8; i++) {
       if (NonMovableCoordsMap().get(`${x + i}${y + i}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x + i}${y + i}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x + i, y: y + i });
+        }
         break;
       }
       coords.push({ x: x + i, y: y + i });
     }
     for (let i = 1; i <= 8; i++) {
       if (NonMovableCoordsMap().get(`${x + i}${y - i}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x + i}${y - i}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x + i, y: y - i });
+        }
         break;
       }
       coords.push({ x: x + i, y: y - i });
     }
     for (let i = 1; i <= 8; i++) {
       if (NonMovableCoordsMap().get(`${x - i}${y + i}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x - i}${y + i}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x - i, y: y + i });
+        }
         break;
       }
       coords.push({ x: x - i, y: y + i });
     }
     for (let i = 1; i <= 8; i++) {
       if (NonMovableCoordsMap().get(`${x - i}${y - i}`)) {
+        if (
+          NonMovableCoordsMap().get(`${x - i}${y - i}`) !== SelectedTile()?.team
+        ) {
+          attack.push({ x: x - i, y: y - i });
+        }
         break;
       }
       coords.push({ x: x - i, y: y - i });
     }
   }
+  // KING MOVEMENT ////////////////////////////////////////////////////
   if (piece == PiecesEnum.King) {
     const test: Coordinates[] = [];
     coords.push({ x: x, y: y + 1 });
@@ -285,7 +441,14 @@ export const AddMovableCoordinates = (
     coords.push({ x: x - 1, y: y + 1 });
     coords.push({ x: x - 1, y: y - 1 });
     coords.forEach((coord) => {
-      if (!NonMovableCoordsMap().get(`${coord.x}${coord.y}`)) {
+      if (NonMovableCoordsMap().has(`${coord.x}${coord.y}`)) {
+        if (
+          NonMovableCoordsMap().get(`${coord.x}${coord.y}`) !==
+          SelectedTile()?.team
+        ) {
+          attack.push({ x: coord.x, y: coord.y });
+        }
+      } else {
         test.push(coord);
       }
     });

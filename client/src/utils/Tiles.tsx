@@ -1,6 +1,5 @@
 import { Component } from "solid-js";
 import style from "../styles/ChessBoard.module.css";
-import { NonMovableCoordsMap } from "./sharedSignals";
 import { tileProps } from "./types";
 import { handleTileClick } from "./TileMovement";
 
@@ -11,15 +10,15 @@ export const BlackTile: Component<tileProps> = (props: tileProps) => {
 
   return (
     <div
-      class={style.BlackTile}
-      onClick={() =>
-        handleTileClick(props.piece, props.x, props.y, props.img, props.index, props.team)
-      }
-      id={id}
+    class={style.BlackTile}
+    onClick={() =>
+      handleTileClick(props.piece, props.x, props.y, props.img, props.index, props.team)
+    }
+    id={id}
     >
       {props.img == null ? null : (
         <img src={props.img} alt="Chess Piece" id={id_image} />
-      )}
+        )}
     </div>
   );
 };

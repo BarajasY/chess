@@ -32,7 +32,7 @@ export const TeamEnum = {
 export class Chessboard {
   init() {
     const total: number = 8;
-    let temp = new Map();
+    let temp:Map<string, Symbol> = new Map();
 
     for (let i = 0; i < total; i++) {
       for (let j = 0; j < total; j++) {
@@ -44,19 +44,18 @@ export class Chessboard {
           tile: null,
           team: null
         };
-        //Uses formPiece function which throws img and piece enum according to x and y coordinates.
-        let [img, piece] = formPiece(i, j);
+        //Uses formPiece function which throws img, piece and team according to x (j) and y (i) coordinates.
+        let [img, piece, team] = formPiece(j, i);
         onePiece.img = img;
         onePiece.type = piece;
         if(piece) {
-          temp.set(`${j}${i}`, true);
+          onePiece.team = team;
+          temp.set(`${j}${i}`, team!)
         }
         if ((i + j) % 2 == 0) {
           onePiece.tile = TileEnum.White;
-          onePiece.team = TeamEnum.WhiteTeam;
         } else {
           onePiece.tile = TileEnum.Black;
-          onePiece.team = TeamEnum.BlackTeam;
         }
         setAllPieces((value) => [...value, onePiece]);
       }

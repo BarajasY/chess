@@ -25,6 +25,14 @@ export type ChessPiece = {
     team: Symbol | null
 }
 
+export type SelectedChessPiece = {
+    img: string | null,
+    coordinates: Coordinates,
+    type: Symbol | null,
+    team: Symbol | null,
+    index:number
+}
+
 export interface tileProps {
     img: string | null;
     x: number;
