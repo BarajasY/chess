@@ -156,7 +156,6 @@ pub async fn handle_socket(
         let msg_sender = sender2.clone();
         tokio::spawn(async move {
             while let Ok(msg) = rx.recv().await {
-                dbg!(&msg);
                 let msg_type: MsgType = from_str(msg.as_str()).unwrap();
                 if msg_type.msg_type == "Movement" {
                     let parsed: WSMessageCoordinates = from_str(msg.as_str()).unwrap();
@@ -278,7 +277,6 @@ pub async fn handle_socket(
                             "Movement" => {
                                 let parsed: WSMessageCoordinates = from_str(t.as_str()).unwrap();
                                 serialized = to_string(&parsed).unwrap();
-                                dbg!(&parsed);
                             }
                             //Handler for Deleting matches from database..
                             "Delete" => {
@@ -299,7 +297,6 @@ pub async fn handle_socket(
                         }
                         // Serialize edited message to send it to client.
                         // Send edited message to client (send_msg function)
-                        dbg!(&serialized);
                         let _ = state.lock().await.tx.send(serialized);
                     }
                     //Print binaries

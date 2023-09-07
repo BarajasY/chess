@@ -44,6 +44,13 @@ export interface tileProps {
   }
 
 export type WSMovementMessage = {
+    table_code: string,
+    msg: WSMovementCoordinates,
+    msg_type: string,
+    user_code: string
+}
+
+export type WSMovementCoordinates = {
     origin: Coordinates,
     end: Coordinates
 }

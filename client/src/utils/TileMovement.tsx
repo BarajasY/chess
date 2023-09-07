@@ -20,7 +20,7 @@ import {
   TableCode,
   UserCode,
 } from "./sharedSignals";
-import { Coordinates, WSMovementMessage } from "./types";
+import { Coordinates, WSMovementCoordinates, WSMovementMessage } from "./types";
 
 //Function whenever user clicks on a tile. /////////////////////////////////
 export const handleTileClick = (
@@ -62,7 +62,7 @@ export const handleTileClick = (
               }
             });
           });
-          const text:WSMovementMessage = {
+          const text:WSMovementCoordinates = {
             origin: {x: SelectedTile()?.coordinates.x!, y: SelectedTile()?.coordinates.y!},
             end: {x, y}
           }
@@ -127,18 +127,18 @@ export const handleTileClick = (
           });
         });
         setNonMovableCoordsMap(tempMap);
+        const text:WSMovementCoordinates = {
+          origin: {x: SelectedTile()?.coordinates.x!, y: SelectedTile()?.coordinates.y!},
+          end: {x, y}
+        }
+        server.send(JSON.stringify({
+          table_code: TableCode(),
+          msg: text,
+          msg_type: "Movement",
+          user_code: UserCode()
+        }))
       }
     }
-    const text:WSMovementMessage = {
-      origin: {x: SelectedTile()?.coordinates.x!, y: SelectedTile()?.coordinates.y!},
-      end: {x, y}
-    }
-    server.send(JSON.stringify({
-      table_code: TableCode(),
-      msg: text,
-      msg_type: "Movement",
-      user_code: UserCode()
-    }))
     setFirstClick(false);
     setMovableCoords([]);
     setAttackCoords([]);
