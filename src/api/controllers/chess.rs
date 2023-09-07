@@ -12,19 +12,11 @@ use axum::{
 
 use futures::{sink::SinkExt, stream::StreamExt};
 use serde::{Deserialize, Serialize};
-use serde_json::{from_str, json, to_string};
+use serde_json::{from_str, to_string};
 use sqlx::{postgres::PgListener, Row};
 use tokio::sync::Mutex;
 
 use crate::api::{db::get_listener, state::AppState};
-/* #[derive(Deserialize, Serialize, Debug)]
-pub struct TempWSMessage {
-    table_code: String,
-    user_code: String,
-    msg: String,
-    msg_type: String,
-    open: Option<bool>,
-} */
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct WSMessage {
@@ -89,18 +81,18 @@ pub async fn handle_ws(
 ) -> impl IntoResponse {
     let listener = get_listener().await;
     //Upgrades http request to websocket connection. Handshake is done automatically.
-    ws.on_upgrade(move |socket| handle_socket(socket, addr, app_state, listener))
+    ws.on_upgrade(move |socket| handle_socket(socket, app_state, listener))
 }
 
 //Actual websocket handler. One websocket will spawn per connection, so per client.
 pub async fn handle_socket(
     socket: WebSocket,
-    addr: SocketAddr,
     state: Arc<Mutex<AppState>>,
     mut listener: PgListener,
 ) {
     //Making the code a mutable ARC with arc mutex of our websocket connection.
     let code = Arc::new(Mutex::new(String::new()));
+    let team_number = Arc::new(Mutex::new(0));
 
     //Subscribing to our broadcast channel for global communication.
     let mut rx = state.lock().await.tx.subscribe();
@@ -276,6 +268,28 @@ pub async fn handle_socket(
                             //Fired when a user makes a movement mid-match.
                             "Movement" => {
                                 let parsed: WSMessageCoordinates = from_str(t.as_str()).unwrap();
+                                serialized = to_string(&parsed).unwrap();
+                            }
+                            "Number" => {
+                                let mut parsed: WSMessage = from_str(t.as_str()).unwrap();
+                                let mut guard = team_number.lock().await;
+                                let i = fastrand::usize(..9);
+                                let number:usize = parsed.msg.parse::<usize>().unwrap();
+                                let x = i.abs_diff(number);
+                                parsed.msg = x.to_string();
+                                *guard = x;
+                                serialized = to_string(&parsed).unwrap();
+                            }
+                            "Team" => {
+                                let guard = team_number.lock().await;
+                                let mut parsed: WSMessage = from_str(t.as_str()).unwrap();
+                                let mut numbers:Vec<u32> = parsed.msg.chars().map(|c| c.to_digit(10).unwrap()).collect();
+                                numbers.sort();
+                                if numbers[0] == *guard as u32 {
+                                    parsed.msg = String::from("White")
+                                } else {
+                                    parsed.msg = String::from("Black")
+                                }
                                 serialized = to_string(&parsed).unwrap();
                             }
                             //Handler for Deleting matches from database..
