@@ -20,6 +20,9 @@ export const [NonMovableCoords, setNonMovableCoords] = createSignal<Coordinates[
 export const [MovableTiles, setMovableTiles] = createSignal<HTMLElement[] | null>([]);
 export const [AttackTiles, setAttackTiles] = createSignal<HTMLElement[] | null>([]);
 
+export const [SelectedNumber, setSelectedNumber] = createSignal<number | undefined>(undefined);
+
+export const [UserTeam, setUserTeam] = createSignal<Symbol | undefined>(undefined);
 
 export const [MovableCoordsMap, setMovableCoordsMap] = createSignal<Map<string, boolean>>(new Map());
 export const [FirstClick, setFirstClick] = createSignal<boolean>(false);

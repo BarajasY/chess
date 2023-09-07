@@ -285,6 +285,7 @@ dependencies = [
  "axum",
  "axum-extra",
  "dotenvy",
+ "fastrand",
  "futures",
  "futures-util",
  "http",

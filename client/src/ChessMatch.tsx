@@ -1,25 +1,41 @@
-import { Component } from "solid-js";
+import { Component, For, createSignal } from "solid-js";
 import style from "./styles/ChessMatch.module.css";
 import {
+  SelectedNumber,
   TableCode,
   UserCode,
+  UserTeam,
+  setSelectedNumber,
 } from "./utils/sharedSignals";
-import { Chessboard } from "./utils/ChessBoard";
+import { Chessboard, TeamEnum } from "./utils/ChessBoard";
 
 interface Props {
   server: WebSocket;
 }
 
 const ChessMatch: Component<Props> = ({ server }) => {
-  const sendMessage = () => {
+  const numbers: number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+  const sendNumberMessage = (number: number) => {
+    setSelectedNumber(number);
     server.send(
       JSON.stringify({
         table_code: TableCode(),
-        msg: "D8",
-        msg_type: "Movement",
+        msg: `${SelectedNumber()}`,
+        msg_type: "Number",
         user_code: UserCode(),
       })
     );
+  };
+
+  const formatTeamName = (team: Symbol): string => {
+    if (team === TeamEnum.BlackTeam) {
+      return "Black";
+    } else if (team === TeamEnum.WhiteTeam) {
+      return "White";
+    } else {
+      return "";
+    }
   };
 
   const board = new Chessboard();
@@ -27,8 +43,34 @@ const ChessMatch: Component<Props> = ({ server }) => {
   return (
     <div class={style.ChessWrapper}>
       <div class={style.ChessContent} id="match">
+        {UserTeam() != undefined && <h1>You are in the {formatTeamName(UserTeam()!)} team</h1>}
         {board.init(server)}
       </div>
+      {UserTeam() ? null : (
+        <div class={style.ChessTeam}>
+          <section class={style.ChessTeamContent}>
+            {SelectedNumber() != undefined ? (
+              <>
+                <h1>Waiting for your opponent</h1>
+              </>
+            ) : (
+              <>
+                <h1>Select a Number</h1>
+                <article>
+                  <For each={numbers}>
+                    {(number) => (
+                      <button onClick={() => sendNumberMessage(number)}>
+                        {number}
+                      </button>
+                    )}
+                  </For>
+                </article>
+              </>
+            )}
+            <h1>Number Selected: {SelectedNumber()}</h1>
+          </section>
+        </div>
+      )}
     </div>
   );
 };

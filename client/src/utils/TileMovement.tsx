@@ -19,6 +19,7 @@ import {
   setPiecesEaten,
   TableCode,
   UserCode,
+  UserTeam,
 } from "./sharedSignals";
 import { Coordinates, WSMovementCoordinates, WSMovementMessage } from "./types";
 
@@ -33,71 +34,78 @@ export const handleTileClick = (
   server: WebSocket
 ) => {
   if (piece != null) {
-    if (FirstClick()) {
-      //If the tile is a movable one.
-      if (MovableCoordsMap().has(`${x}${y}`)) {
-        //if the piece's team is contrary to ours.
-        if (team != SelectedTile()?.team) {
-          ////
-          let tempmap = new Map(NonMovableCoordsMap());
-          setAllPieces((pieces) => {
-            return pieces.map((piece, i) => {
-              if (i == index) {
-                tempmap.set(`${x}${y}`, SelectedTile()?.team!);
-                return {
-                  ...piece,
-                  img: SelectedTile()?.img!,
-                  team: SelectedTile()?.team!,
-                  type: SelectedTile()?.type!,
-                };
-              } else if (i == SelectedTile()?.index) {
-                tempmap.delete(
-                  `${SelectedTile()?.coordinates.x}${
-                    SelectedTile()?.coordinates.y
-                  }`
-                );
-                return { ...piece, img: null, team: null, type: null };
-              } else {
-                return piece;
-              }
+    if (team === UserTeam() || SelectedTile()?.team === UserTeam()) {
+      if (FirstClick()) {
+        //If the tile is a movable one.
+        if (MovableCoordsMap().has(`${x}${y}`)) {
+          //if the piece's team is contrary to ours.
+          if (team != SelectedTile()?.team) {
+            ////
+            let tempmap = new Map(NonMovableCoordsMap());
+            setAllPieces((pieces) => {
+              return pieces.map((piece, i) => {
+                if (i == index) {
+                  tempmap.set(`${x}${y}`, SelectedTile()?.team!);
+                  return {
+                    ...piece,
+                    img: SelectedTile()?.img!,
+                    team: SelectedTile()?.team!,
+                    type: SelectedTile()?.type!,
+                  };
+                } else if (i == SelectedTile()?.index) {
+                  tempmap.delete(
+                    `${SelectedTile()?.coordinates.x}${
+                      SelectedTile()?.coordinates.y
+                    }`
+                  );
+                  return { ...piece, img: null, team: null, type: null };
+                } else {
+                  return piece;
+                }
+              });
             });
-          });
-          const text:WSMovementCoordinates = {
-            origin: {x: SelectedTile()?.coordinates.x!, y: SelectedTile()?.coordinates.y!},
-            end: {x, y}
+            const text: WSMovementCoordinates = {
+              origin: {
+                x: SelectedTile()?.coordinates.x!,
+                y: SelectedTile()?.coordinates.y!,
+              },
+              end: { x, y },
+            };
+            server.send(
+              JSON.stringify({
+                table_code: TableCode(),
+                msg: text,
+                msg_type: "Movement",
+                user_code: UserCode(),
+              })
+            );
+            setNonMovableCoordsMap(tempmap);
+            setFirstClick(false);
+            setMovableCoords([]);
+            setAttackCoords([]);
+            updateTiles();
+            setSelectedTile(undefined);
+            /////
           }
-          server.send(JSON.stringify({
-            table_code: TableCode(),
-            msg: text,
-            msg_type: "Movement",
-            user_code: UserCode()
-          }))
-          setNonMovableCoordsMap(tempmap)
-          setFirstClick(false);
-          setMovableCoords([]);
-          setAttackCoords([]);
-          updateTiles();
-          setSelectedTile(undefined);
-          /////
         }
+      } else {
+        //Show available movement options for piece.
+        setFirstClick(true);
+        setSelectedTile((value) => {
+          return {
+            ...value,
+            img,
+            coordinates: { x: x, y: y },
+            type: piece,
+            team,
+            index,
+          };
+        });
+        let tempcoordinates = AddMovableCoordinates(piece, x, y);
+        setMovableCoords(tempcoordinates[0]);
+        setAttackCoords(tempcoordinates[1]);
+        updateTiles();
       }
-    } else {
-      //Show available movement options for piece.
-      setFirstClick(true);
-      setSelectedTile((value) => {
-        return {
-          ...value,
-          img,
-          coordinates: { x: x, y: y },
-          type: piece,
-          team,
-          index,
-        };
-      });
-      let tempcoordinates = AddMovableCoordinates(piece, x, y);
-      setMovableCoords(tempcoordinates[0]);
-      setAttackCoords(tempcoordinates[1]);
-      updateTiles();
     }
   } else {
     //Move piece to the designated position.
@@ -127,16 +135,21 @@ export const handleTileClick = (
           });
         });
         setNonMovableCoordsMap(tempMap);
-        const text:WSMovementCoordinates = {
-          origin: {x: SelectedTile()?.coordinates.x!, y: SelectedTile()?.coordinates.y!},
-          end: {x, y}
-        }
-        server.send(JSON.stringify({
-          table_code: TableCode(),
-          msg: text,
-          msg_type: "Movement",
-          user_code: UserCode()
-        }))
+        const text: WSMovementCoordinates = {
+          origin: {
+            x: SelectedTile()?.coordinates.x!,
+            y: SelectedTile()?.coordinates.y!,
+          },
+          end: { x, y },
+        };
+        server.send(
+          JSON.stringify({
+            table_code: TableCode(),
+            msg: text,
+            msg_type: "Movement",
+            user_code: UserCode(),
+          })
+        );
       }
     }
     setFirstClick(false);
