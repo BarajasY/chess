@@ -7,19 +7,22 @@ import {
   TableCode,
   UserCode,
   setIncomingMovement,
+  setSelectedNumber,
   setTableCode,
   setUserCode,
+  setUserTeam,
 } from "./utils/sharedSignals";
 import { WSMovement } from "./utils/WSMovement";
+import { TeamEnum } from "./utils/ChessBoard";
 
 const App: Component = () => {
   const [Code, setCode] = createSignal<string>("");
-  const [InputMessage, setInputMessage] = createSignal<string>("");
   const [AvailableMatches, setAvailableMatches] = createSignal<MatchesData[]>(
     []
   );
   const [Waiting, setWaiting] = createSignal<boolean>(false);
   const [StartMatch, setStartMatch] = createSignal<boolean>(false);
+  const TeamNumbers: number[] = [];
 
   const server = new WebSocket("ws://127.0.0.1:8000/ws");
   const uid = new ShortUniqueId();
@@ -49,17 +52,6 @@ const App: Component = () => {
     );
   };
 
-  const submitMessage = () => {
-    server.send(
-      JSON.stringify({
-        table_code: TableCode(),
-        msg: InputMessage(),
-        msg_type: "Movement",
-        user_code: UserCode(),
-      })
-    );
-  };
-
   //Close the websocket connection in THIS client.
   const close = () => {
     server.close();
@@ -80,20 +72,45 @@ const App: Component = () => {
           })
         );
       }
-    } else if (parsed.msg_type == "Delete") {
+    } else if (parsed.msg_type === "Delete") {
       setTableCode("");
-    } else if (parsed.msg_type == "Movement") {
+    } else if (parsed.msg_type === "Movement") {
       let parsed2: WSMovementMessage = JSON.parse(event.data);
-      if (parsed2.user_code != UserCode()) {
+      if (parsed2.user_code !== UserCode()) {
         WSMovement(parsed2.msg.origin, parsed2.msg.end);
       }
-    } else if (parsed.msg_type == "Matches") {
+    } else if (parsed.msg_type === "Matches") {
       setIncomingMovement("");
       setAvailableMatches(JSON.parse(parsed.msg));
-    } else if (parsed.msg_type == "PgNotification") {
+    } else if (parsed.msg_type === "PgNotification") {
       setAvailableMatches([...AvailableMatches(), JSON.parse(parsed.msg)]);
-    } else if (parsed.msg_type == "Start") {
+    } else if (parsed.msg_type === "Start") {
       setStartMatch(true);
+    } else if (parsed.msg_type === "Number") {
+      TeamNumbers.push(Number(parsed.msg));
+      if (TeamNumbers.length === 2) {
+        server.send(
+          JSON.stringify({
+            table_code: TableCode(),
+            msg: `${TeamNumbers[0]}${TeamNumbers[1]}`,
+            msg_type: "Team",
+            user_code: UserCode(),
+          })
+        );
+      }
+    } else if (parsed.msg_type === "Team") {
+      if (parsed.user_code === UserCode()) {
+        switch (parsed.msg) {
+          case "White":
+            setUserTeam(TeamEnum.WhiteTeam);
+            break;
+          case "Black":
+            setUserTeam(TeamEnum.BlackTeam);
+            break;
+        }
+      }
+      setSelectedNumber(undefined);
+      console.log(parsed);
     }
   });
 
