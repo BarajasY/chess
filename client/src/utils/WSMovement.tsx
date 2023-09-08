@@ -1,8 +1,9 @@
-import { AllPieces, setAllPieces } from "./sharedSignals";
+import { AllPieces, NonMovableCoordsMap, setAllPieces, setNonMovableCoords, setNonMovableCoordsMap } from "./sharedSignals";
 import { ChessPiece, Coordinates } from "./types";
 
 export const WSMovement = (origin: Coordinates, end: Coordinates) => {
   let originElement: ChessPiece;
+  let tempmap = new Map(NonMovableCoordsMap());
   //Find the piece
   for (let i = 0; i < AllPieces().length; i++) {
     const element = AllPieces()[i];
@@ -11,7 +12,7 @@ export const WSMovement = (origin: Coordinates, end: Coordinates) => {
       element.coordinates.y === origin.y
     ) {
       originElement = element;
-      console.log(originElement)
+      console.log(originElement);
     }
   }
   setAllPieces((pieces) => {
@@ -21,10 +22,12 @@ export const WSMovement = (origin: Coordinates, end: Coordinates) => {
         piece.coordinates.x === origin.x &&
         piece.coordinates.y === origin.y
       ) {
+        tempmap.delete(`${origin.x}${origin.y}`);
         return { ...piece, img: null, team: null, type: null };
       }
       //Inserting data into end tile.
       if (piece.coordinates.x === end.x && piece.coordinates.y === end.y) {
+        tempmap.set(`${end.x}${end.y}`, originElement.team!);
         return {
           ...piece,
           img: originElement.img,
@@ -35,4 +38,5 @@ export const WSMovement = (origin: Coordinates, end: Coordinates) => {
       return piece;
     });
   });
+  setNonMovableCoordsMap(tempmap)
 };
