@@ -1,6 +1,7 @@
 import { Component, For, createSignal } from "solid-js";
 import style from "./styles/ChessMatch.module.css";
 import {
+  CurrentTurn,
   SelectedNumber,
   TableCode,
   UserCode,
@@ -43,6 +44,7 @@ const ChessMatch: Component<Props> = ({ server }) => {
   return (
     <div class={style.ChessWrapper}>
       <div class={style.ChessContent} id="match">
+        {CurrentTurn() ? <h1>It's your turn!</h1> : <h1>It's not your turn</h1>}
         {UserTeam() != undefined && <h1>You are in the {formatTeamName(UserTeam()!)} team</h1>}
         {board.init(server)}
       </div>

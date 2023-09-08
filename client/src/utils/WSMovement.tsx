@@ -12,7 +12,6 @@ export const WSMovement = (origin: Coordinates, end: Coordinates) => {
       element.coordinates.y === origin.y
     ) {
       originElement = element;
-      console.log(originElement);
     }
   }
   setAllPieces((pieces) => {

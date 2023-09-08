@@ -4,6 +4,7 @@ import { ChessPiece, Coordinates, SelectedChessPiece } from "./types";
 export const [TableCode, setTableCode] = createSignal<string>("");
 export const [UserCode, setUserCode] = createSignal<string>("");
 export const [IncomingMovement, setIncomingMovement] = createSignal<string>("");
+export const [CurrentTurn, setCurrentTurn] = createSignal<boolean | undefined>(undefined);
 
 export const [SelectedTile, setSelectedTile] = createSignal<SelectedChessPiece>();
 

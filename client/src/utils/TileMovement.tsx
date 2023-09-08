@@ -20,6 +20,7 @@ import {
   TableCode,
   UserCode,
   UserTeam,
+  CurrentTurn,
 } from "./sharedSignals";
 import { Coordinates, WSMovementCoordinates, WSMovementMessage } from "./types";
 
@@ -33,6 +34,7 @@ export const handleTileClick = (
   team: Symbol | null,
   server: WebSocket
 ) => {
+  if (CurrentTurn()) {
   if (piece != null) {
     if (team === UserTeam() || SelectedTile()?.team === UserTeam()) {
       if (FirstClick()) {
@@ -108,55 +110,56 @@ export const handleTileClick = (
       }
     }
   } else {
-    //Move piece to the designated position.
-    if (FirstClick()) {
-      if (MovableCoordsMap().has(`${x}${y}`)) {
-        let tempMap = new Map(NonMovableCoordsMap());
-        AddMovableCoordinates(piece, x, y);
-        setAllPieces((piece) => {
-          return piece.map((value, i) => {
-            if (i == index) {
-              tempMap.set(
-                `${value.coordinates.x}${value.coordinates.y}`,
-                SelectedTile()?.team!
-              );
-              return {
-                ...value,
-                img: SelectedTile()?.img!,
-                type: SelectedTile()?.type!,
-                team: SelectedTile()?.team!,
-              };
-            } else if (i == SelectedTile()?.index) {
-              tempMap.delete(`${value.coordinates.x}${value.coordinates.y}`);
-              return { ...value, img: null, type: null, team: null };
-            } else {
-              return value;
-            }
+      //Move piece to the designated position.
+      if (FirstClick()) {
+        if (MovableCoordsMap().has(`${x}${y}`)) {
+          let tempMap = new Map(NonMovableCoordsMap());
+          AddMovableCoordinates(piece, x, y);
+          setAllPieces((piece) => {
+            return piece.map((value, i) => {
+              if (i == index) {
+                tempMap.set(
+                  `${value.coordinates.x}${value.coordinates.y}`,
+                  SelectedTile()?.team!
+                );
+                return {
+                  ...value,
+                  img: SelectedTile()?.img!,
+                  type: SelectedTile()?.type!,
+                  team: SelectedTile()?.team!,
+                };
+              } else if (i == SelectedTile()?.index) {
+                tempMap.delete(`${value.coordinates.x}${value.coordinates.y}`);
+                return { ...value, img: null, type: null, team: null };
+              } else {
+                return value;
+              }
+            });
           });
-        });
-        setNonMovableCoordsMap(tempMap);
-        const text: WSMovementCoordinates = {
-          origin: {
-            x: SelectedTile()?.coordinates.x!,
-            y: SelectedTile()?.coordinates.y!,
-          },
-          end: { x, y },
-        };
-        server.send(
-          JSON.stringify({
-            table_code: TableCode(),
-            msg: text,
-            msg_type: "Movement",
-            user_code: UserCode(),
-          })
-        );
+          setNonMovableCoordsMap(tempMap);
+          const text: WSMovementCoordinates = {
+            origin: {
+              x: SelectedTile()?.coordinates.x!,
+              y: SelectedTile()?.coordinates.y!,
+            },
+            end: { x, y },
+          };
+          server.send(
+            JSON.stringify({
+              table_code: TableCode(),
+              msg: text,
+              msg_type: "Movement",
+              user_code: UserCode(),
+            })
+          );
+        }
       }
+      setFirstClick(false);
+      setMovableCoords([]);
+      setAttackCoords([]);
+      updateTiles();
+      setSelectedTile(undefined);
     }
-    setFirstClick(false);
-    setMovableCoords([]);
-    setAttackCoords([]);
-    updateTiles();
-    setSelectedTile(undefined);
   }
 };
 

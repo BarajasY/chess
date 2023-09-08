@@ -6,6 +6,8 @@ const ChessMatch = lazy(() => import("./ChessMatch"));
 import {
   TableCode,
   UserCode,
+  UserTeam,
+  setCurrentTurn,
   setIncomingMovement,
   setSelectedNumber,
   setTableCode,
@@ -75,9 +77,13 @@ const App: Component = () => {
     } else if (parsed.msg_type === "Delete") {
       setTableCode("");
     } else if (parsed.msg_type === "Movement") {
+      console.log(parsed);
       let parsed2: WSMovementMessage = JSON.parse(event.data);
       if (parsed2.user_code !== UserCode()) {
         WSMovement(parsed2.msg.origin, parsed2.msg.end);
+        setCurrentTurn(true)
+      } else {
+        setCurrentTurn(false)
       }
     } else if (parsed.msg_type === "Matches") {
       setIncomingMovement("");
@@ -109,8 +115,10 @@ const App: Component = () => {
             break;
         }
       }
+      if(UserTeam() === TeamEnum.WhiteTeam) {
+        setCurrentTurn(true);
+      }
       setSelectedNumber(undefined);
-      console.log(parsed);
     }
   });
 
